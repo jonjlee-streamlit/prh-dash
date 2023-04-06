@@ -18,3 +18,8 @@ Sample financial dashboard built on [Streamlit](https://streamlit.io/)
         pipenv shell
         streamlit run app.py --server.enableCORS false --server enableXsrfProtection false
         ```
+    * This project uses a Python virtual environment, managed by [`pipenv`](https://pipenv-fork.readthedocs.io/en/latest/). To run python locally, first enter the projects virtual environment using: 
+        ```
+        pipenv shell
+        python
+        ````
