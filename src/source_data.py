@@ -4,6 +4,37 @@ Defines data classes that hold raw and processed source data
 import pandas as pd
 from dataclasses import dataclass
 
+# Column names from Income Statement sheet, columns B:J
+_INCOME_STMT_COLUMNS = [
+    "Ledger Account",
+    "Month Actual",
+    "Month Budget",
+    "Month Variance",
+    "Month Variance %",
+    "",
+    "Year Actual",
+    "Year Budget",
+    "Year Variance",
+    "Year Variance %",
+]
+# Column names from STATS sheet, columns B:N
+_STATS_COLUMNS = [
+    "Metric",
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+    "Total",
+]
+
 
 @dataclass(eq=True, frozen=True)
 class RawData:
@@ -17,17 +48,7 @@ class RawData:
     # Volume data from Epic
     volume: pd.DataFrame
     hours: pd.DataFrame
-
-
-@dataclass
-class ProcessedData:
-    """Represents processed data including"""
-
-    # Original data set
-    raw: RawData
-
-    # Processed data set
-    all: pd.DataFrame
+    values: dict
 
 
 def parse(filename: str, contents: bytes) -> RawData:
@@ -39,7 +60,7 @@ def parse(filename: str, contents: bytes) -> RawData:
     volume_stats_df = pd.read_excel(contents, sheet_name="STATS", header=None)
 
     revenue, deductions, expenses = _parse_income_stmt(income_stmt_df)
-    volume, hours = _parse_volume_stats(volume_stats_df)
+    volume, hours, stats = _parse_volume_stats(volume_stats_df)
 
     return RawData(
         revenue=revenue,
@@ -47,6 +68,7 @@ def parse(filename: str, contents: bytes) -> RawData:
         expenses=expenses,
         volume=volume,
         hours=hours,
+        values=stats,
     )
 
 
@@ -54,19 +76,6 @@ def _parse_income_stmt(df):
     """
     Read the Income Statement sheet from the source Excel report
     """
-    # Column names from Excel sheet, columns B:J
-    COLUMNS = [
-        "Ledger Account",
-        "Month Actual",
-        "Month Budget",
-        "Month Variance",
-        "Month Variance %",
-        "",
-        "Year Actual",
-        "Year Budget",
-        "Year Variance",
-        "Year Variance %",
-    ]
 
     def _rows(df: pd.DataFrame, start_row_text: str, end_row_text: str) -> pd.DataFrame:
         """
@@ -82,7 +91,7 @@ def _parse_income_stmt(df):
         df = df.loc[start_row:end_row, :]
 
         # Drop empty separator column
-        df.columns = COLUMNS
+        df.columns = _INCOME_STMT_COLUMNS
         df = df.drop(df.columns[5], axis=1)
         return df
 
@@ -102,30 +111,19 @@ def _parse_volume_stats(df):
     """
     Read the volume and productive/non-productive hours data from the source Excel report
     """
-    # Column names from Excel sheet, columns B:N
-    COLUMNS = [
-        "Metric",
-        "JAN",
-        "FEB",
-        "MAR",
-        "APR",
-        "MAY",
-        "JUN",
-        "JUL",
-        "AUG",
-        "SEP",
-        "OCT",
-        "NOV",
-        "DEC",
-        "Total",
-    ]
-
     # Grab the data in B3:O6 (.loc first dimension is rows, second is columns)
     volume = df.loc[3:5, 1:14]
-    volume.columns = COLUMNS
+    volume.columns = _STATS_COLUMNS
 
     # Grab the data in B22:O24
     hours = df.loc[21:23, 1:14]
-    hours.columns = COLUMNS
+    hours.columns = _STATS_COLUMNS
 
-    return volume, hours
+    # Extract standalone scalars
+    stats = {
+        "std_fte_hours": df.iloc[20][2],  # C21
+        "pct_hours_productive": df.iloc[20][3],  # D21
+        "avg_hourly_rate": df.iloc[20][4],  # E21
+    }
+
+    return volume, hours, stats

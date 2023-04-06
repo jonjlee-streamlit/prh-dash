@@ -3,7 +3,7 @@ This module contains functions to render various parts of the application, inclu
 sidebar for configuration options, main app content, etc.
 """
 import streamlit as st
-from . import source_data
+from . import data
 
 
 def show_update(cur_files: list[str]) -> tuple[list | None, bool]:
@@ -29,7 +29,7 @@ def show_settings() -> dict:
     return {}
 
 
-def show_main_content(settings: dict, processed_data: source_data.ProcessedData):
+def show_main_content(settings: dict, processed_data: data.ProcessedData):
     """
     Render main content of the app, given the user options from the side bar and pre-processed data.
     """
