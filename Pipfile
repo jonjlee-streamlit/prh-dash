@@ -7,6 +7,7 @@ name = "pypi"
 streamlit = "*"
 xlrd = "*"
 plotly = "*"
+openpyxl = "*"
 
 [dev-packages]
 black = "*"

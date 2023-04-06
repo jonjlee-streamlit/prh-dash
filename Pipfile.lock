@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2add4c4136ad850daf899bb44ead5cfce484009058e2ea766e38e0b6239aa0d6"
+            "sha256": "226a1a5a17dcca8f6071b7784b3b5da9baccaf15c48d22956bad4335e0945c44"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -160,6 +160,14 @@
             ],
             "markers": "python_version >= '3.6'",
             "version": "==0.4"
+        },
+        "et-xmlfile": {
+            "hashes": [
+                "sha256:8eb9e2bc2f8c97e37a2dc85a09ecdcdec9d8a396530a6d5a33b30b9a92da0c5c",
+                "sha256:a2ba85d1d6a74ef63837eed693bcb89c3f752169b0e3e7ae5b16ca5e1b3deada"
+            ],
+            "markers": "python_version >= '3.6'",
+            "version": "==1.1.0"
         },
         "gitdb": {
             "hashes": [
@@ -322,6 +330,14 @@
             ],
             "markers": "python_version >= '3.8'",
             "version": "==1.24.2"
+        },
+        "openpyxl": {
+            "hashes": [
+                "sha256:a6f5977418eff3b2d5500d54d9db50c8277a368436f4e4f8ddb1be3422870184",
+                "sha256:f91456ead12ab3c6c2e9491cf33ba6d08357d802192379bb482f1033ade496f5"
+            ],
+            "index": "pypi",
+            "version": "==3.1.2"
         },
         "packaging": {
             "hashes": [
@@ -603,14 +619,6 @@
             "markers": "python_version >= '3.8'",
             "version": "==0.7.1"
         },
-        "semver": {
-            "hashes": [
-                "sha256:94df43924c4521ec7d307fc86da1531db6c2c33d9d5cdc3e64cca0eb68569269",
-                "sha256:ab4f69fb1d1ecfb5d81f96411403d7a611fa788c45d252cf5b408025df3ab6ce"
-            ],
-            "markers": "python_version >= '3.7'",
-            "version": "==3.0.0"
-        },
         "six": {
             "hashes": [
                 "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926",
@@ -629,11 +637,11 @@
         },
         "streamlit": {
             "hashes": [
-                "sha256:41a544b8dc618ee65726da3ac76149c5b2bf3da7bde6d50625c4f7ec95e6c9e8",
-                "sha256:f6e257e033a2532ce9b37c425717a4e885fa4d0e339fa5dcdbbda8d75ec191e9"
+                "sha256:05862598952a9126e16652caa5bc88eeeea7b2773af252e2daccf1c84ceaaef4",
+                "sha256:c72d9639508679c5e411d1f886d213777759501d01975285c049dc30db463c1a"
             ],
             "index": "pypi",
-            "version": "==1.20.0"
+            "version": "==1.21.0"
         },
         "tenacity": {
             "hashes": [

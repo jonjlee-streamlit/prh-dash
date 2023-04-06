@@ -19,12 +19,11 @@ def extract_from(files: list[str]) -> RawData:
     return raw_data
 
 
-def process(data: RawData) -> ProcessedData:
+def process(raw: RawData) -> ProcessedData:
     """
     Receives raw source data from extract_from(). Partitions and computes statistics to be displayed by the app.
     """
-    raw = data.raw.copy()
-    return ProcessedData(raw=raw, all=raw)
+    return ProcessedData(raw=raw, all=None)
 
 
 def _read_file(filename: str) -> bytes:
@@ -40,7 +39,20 @@ def _read_file(filename: str) -> bytes:
 def _merge(segments: list[RawData]) -> RawData:
     """Merges data from several RawData objects which hold data from the source data files"""
     # Concatenate all DataFrames from segments
-    raw = pd.concat([segment.raw for segment in segments], ignore_index=True)
+    revenue = pd.concat([segment.revenue for segment in segments], ignore_index=True)
+    deductions = pd.concat(
+        [segment.deductions for segment in segments], ignore_index=True
+    )
+    expenses = pd.concat([segment.expenses for segment in segments], ignore_index=True)
+    volume = pd.concat([segment.volume for segment in segments], ignore_index=True)
+    hours = pd.concat([segment.hours for segment in segments], ignore_index=True)
+
     # Create a new RawData instance with the concatenated DataFrame
-    merged_data = RawData(raw=raw)
+    merged_data = RawData(
+        revenue=revenue,
+        deductions=deductions,
+        expenses=expenses,
+        volume=volume,
+        hours=hours,
+    )
     return merged_data
