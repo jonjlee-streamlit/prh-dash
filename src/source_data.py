@@ -59,8 +59,9 @@ def parse(filename: str, contents: bytes) -> RawData:
     income_stmt_df = pd.read_excel(contents, sheet_name="Income Statement", header=None)
     volume_stats_df = pd.read_excel(contents, sheet_name="STATS", header=None)
 
-    revenue, deductions, expenses = _parse_income_stmt(income_stmt_df)
-    volume, hours, stats = _parse_volume_stats(volume_stats_df)
+    revenue, deductions, expenses, values = _parse_income_stmt(income_stmt_df)
+    volume, hours, volume_values = _parse_volume_stats(volume_stats_df)
+    values.update(volume_values)
 
     return RawData(
         revenue=revenue,
@@ -68,7 +69,7 @@ def parse(filename: str, contents: bytes) -> RawData:
         expenses=expenses,
         volume=volume,
         hours=hours,
-        values=stats,
+        values=values,
     )
 
 
@@ -104,7 +105,10 @@ def _parse_income_stmt(df):
     # Expenses table between "Expenses" and "Total Operating Expenses"
     expenses = _rows(df, "Expenses", "Total Operating Expenses")
 
-    return revenue, deductions, expenses
+    # Extract standalone values not in a table
+    values = {"income_stmt_month": df.iloc[2, 1]}  # B3
+
+    return revenue, deductions, expenses, values
 
 
 def _parse_volume_stats(df):
@@ -119,11 +123,11 @@ def _parse_volume_stats(df):
     hours = df.loc[21:23, 1:14]
     hours.columns = _STATS_COLUMNS
 
-    # Extract standalone scalars
-    stats = {
+    # Extract standalone values not in a table
+    values = {
         "std_fte_hours": df.iloc[20][2],  # C21
         "pct_hours_productive": df.iloc[20][3],  # D21
         "avg_hourly_rate": df.iloc[20][4],  # E21
     }
 
-    return volume, hours, stats
+    return volume, hours, values

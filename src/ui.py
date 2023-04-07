@@ -33,19 +33,37 @@ def show_main_content(settings: dict, data: data.ProcessedData):
     """
     Render main content of the app, given the user options from the side bar and pre-processed data.
     """
-    st.title("Pullman Regional Hospital")
+    st.title("Rehabilitation Services")
 
-    st.header("KPIs")
-    kpi_1, kpi_2, _kpi_3 = st.columns(3)
-    kpi_1.metric(
-        "Revenue per Encounter",
-        "$%s" % round(data.stats["actual_revenue_per_volume"]),
-        "%s%%" % data.stats["variance_revenue_per_volume"],
-    )
+    tab_1, tab_2 = st.tabs(["KPI & Productivity", "Calculations"])
+    s = data.stats
 
-    kpi_2.metric(
-        "Expense per Encounter",
-        "$%s" % round(data.stats["actual_expense_per_volume"]),
-        delta="%s%%" % data.stats["variance_expense_per_volume"],
-        delta_color="inverse",
-    )
+    with tab_1:
+        st.header("KPIs")
+        kpi_1, kpi_2, _kpi_3 = st.columns(3)
+        kpi_1.metric(
+            "Revenue per Encounter",
+            "$%s" % round(s["actual_revenue_per_volume"]),
+            "%s%%" % s["variance_revenue_per_volume"],
+        )
+
+        kpi_2.metric(
+            "Expense per Encounter",
+            "$%s" % round(s["actual_expense_per_volume"]),
+            delta="%s%%" % s["variance_expense_per_volume"],
+            delta_color="inverse",
+        )
+
+        st.header("Productivity")
+        prod_1, prod_2, prod_3 = st.columns(3)
+        prod_1.metric("Hours per Encounter", round(s["actual_hours_per_volume"], 2))
+        prod_2.metric("Target Hours per Encounter", s["target_hours_per_volume"])
+        prod_3.metric("FTE Variance", round(s["fte_variance"], 2))
+
+        prod_2.metric(
+            "Dollar Impact",
+            "$%s" % round(s["fte_variance_dollars"]),
+        )
+
+    with tab_2:
+        st.write(s)

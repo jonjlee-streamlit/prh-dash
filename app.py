@@ -52,5 +52,5 @@ def show_main():
     ui.show_main_content(settings, processed_data)
 
 
-st.set_page_config(page_title="PRH Dashboard", layout="wide")
+st.set_page_config(page_title="PRH Dashboard", layout="centered")
 run()
