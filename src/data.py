@@ -34,11 +34,11 @@ def extract_from(files: list[str]) -> RawData:
     return raw_data
 
 
-def process(raw: RawData) -> ProcessedData:
+def process(settings: dict, raw: RawData) -> ProcessedData:
     """
-    Receives raw source data from extract_from(). Partitions and computes statistics to be displayed by the app.
+    Receives raw source data from extract_from() and user parameters from sidebar. Partitions and computes statistics to be displayed by the app.
     """
-    stats = _calc_stats(raw)
+    stats = _calc_stats(settings, raw)
     return ProcessedData(raw=raw, all=None, stats=stats)
 
 
@@ -62,6 +62,12 @@ def _merge(segments: list[RawData]) -> RawData:
     expenses = pd.concat([segment.expenses for segment in segments], ignore_index=True)
     volume = pd.concat([segment.volume for segment in segments], ignore_index=True)
     hours = pd.concat([segment.hours for segment in segments], ignore_index=True)
+    fte_per_pay_period = pd.concat(
+        [segment.fte_per_pay_period for segment in segments], ignore_index=True
+    )
+    fte_hours_paid = pd.concat(
+        [segment.fte_hours_paid for segment in segments], ignore_index=True
+    )
 
     # Grab scalar values from each segment
     values = {k: v for segment in segments for k, v in segment.values.items()}
@@ -73,12 +79,14 @@ def _merge(segments: list[RawData]) -> RawData:
         expenses=expenses,
         volume=volume,
         hours=hours,
+        fte_per_pay_period=fte_per_pay_period,
+        fte_hours_paid=fte_hours_paid,
         values=values,
     )
     return merged_data
 
 
-def _calc_stats(raw: RawData) -> dict:
+def _calc_stats(settings: dict, raw: RawData) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
     v = {
         # Totals rows from Income Statement
@@ -99,28 +107,31 @@ def _calc_stats(raw: RawData) -> dict:
         # Productive hours are non-vacation hours that are attributed to staff
         "ytd_productive_hours": raw.hours.iloc[0, -1],
         "ytd_non_productive_hours": raw.hours.iloc[1, -1],
+        # Totals column for FTE hours paid
+        "pay_period_hours_paid": raw.fte_hours_paid.iloc[-1, 1],
+        "ytd_hours_paid": raw.fte_hours_paid.iloc[-1, 2],
     }
 
     # KPIs
     v["actual_revenue_per_volume"] = (
         v["ytd_actual_net_revenue"] / v["ytd_actual_volume"]
     )
-    v["budget_revenue_per_volume"] = (
+    v["target_revenue_per_volume"] = (
         v["ytd_budget_net_revenue"] / v["ytd_budget_volume"]
     )
     v["variance_revenue_per_volume"] = round(
-        (v["actual_revenue_per_volume"] / v["budget_revenue_per_volume"] - 1) * 100
+        (v["actual_revenue_per_volume"] / v["target_revenue_per_volume"] - 1) * 100
     )
 
     v["actual_expense_per_volume"] = v["ytd_actual_expense"] / v["ytd_actual_volume"]
-    v["budget_expense_per_volume"] = v["ytd_budget_expense"] / v["ytd_budget_volume"]
+    v["target_expense_per_volume"] = v["ytd_budget_expense"] / v["ytd_budget_volume"]
     v["variance_expense_per_volume"] = round(
-        (v["actual_expense_per_volume"] / v["budget_expense_per_volume"] - 1) * 100
+        (v["actual_expense_per_volume"] / v["target_expense_per_volume"] - 1) * 100
     )
 
     # Productivity. Standard target hours per volume is statically defined.
     v["actual_hours_per_volume"] = v["ytd_productive_hours"] / v["ytd_actual_volume"]
-    v["target_hours_per_volume"] = 4.24
+    v["target_hours_per_volume"] = settings["target_hours_per_volume"]
     v["variance_hours_per_volume"] = (
         v["target_hours_per_volume"] - v["actual_hours_per_volume"]
     )

@@ -34,6 +34,8 @@ _STATS_COLUMNS = [
     "DEC",
     "Total",
 ]
+# Column names from FTE report
+_FTE_COLUMNS = ["Pay Period", "FTEs"]
 
 
 @dataclass(eq=True, frozen=True)
@@ -50,6 +52,10 @@ class RawData:
     hours: pd.DataFrame
     values: dict
 
+    # FTE Report
+    fte_per_pay_period: pd.DataFrame
+    fte_hours_paid: pd.DataFrame
+
 
 def parse(filename: str, contents: bytes) -> RawData:
     """
@@ -58,9 +64,11 @@ def parse(filename: str, contents: bytes) -> RawData:
     # Read relevant sheets from the source Excel report
     income_stmt_df = pd.read_excel(contents, sheet_name="Income Statement", header=None)
     volume_stats_df = pd.read_excel(contents, sheet_name="STATS", header=None)
+    fte_stats_df = pd.read_excel(contents, sheet_name="FTE", header=None)
 
     revenue, deductions, expenses, values = _parse_income_stmt(income_stmt_df)
     volume, hours, volume_values = _parse_volume_stats(volume_stats_df)
+    fte_per_pay_period, fte_hours_paid = _parse_fte_stats(fte_stats_df)
     values.update(volume_values)
 
     return RawData(
@@ -69,6 +77,8 @@ def parse(filename: str, contents: bytes) -> RawData:
         expenses=expenses,
         volume=volume,
         hours=hours,
+        fte_per_pay_period=fte_per_pay_period,
+        fte_hours_paid=fte_hours_paid,
         values=values,
     )
 
@@ -131,3 +141,21 @@ def _parse_volume_stats(df):
     }
 
     return volume, hours, values
+
+
+def _parse_fte_stats(df):
+    """
+    Read the FTE information from the source Excel report
+    """
+    # Grab the data in K6:L31 (.loc first dimension is rows, second is columns)
+    ftes_per_pay_period = df.loc[5:30, 10:11]
+    ftes_per_pay_period.columns = _FTE_COLUMNS
+    ftes_per_pay_period.set_index("Pay Period")
+    ftes_per_pay_period["Pay Period"] = ftes_per_pay_period["Pay Period"].astype(
+        "category"
+    )
+
+    # Table from B6:D10 with hours paid
+    fte_hours_paid = df.loc[5:9, 1:3]
+
+    return ftes_per_pay_period, fte_hours_paid

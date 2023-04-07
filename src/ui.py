@@ -3,6 +3,7 @@ This module contains functions to render various parts of the application, inclu
 sidebar for configuration options, main app content, etc.
 """
 import streamlit as st
+import plotly.express as px
 from . import data
 
 
@@ -26,7 +27,15 @@ def show_settings() -> dict:
     """
     Render the sidebar and return the dict with configuration options set by the user.
     """
-    return {}
+    with st.sidebar:
+        st.header("Dashboard Settings")
+        target_hours_per_volume = st.slider(
+            "Target Man-Hours per Encounter", 2.0, 10.0, 4.24
+        )
+
+    return {
+        "target_hours_per_volume": target_hours_per_volume,
+    }
 
 
 def show_main_content(settings: dict, data: data.ProcessedData):
@@ -35,7 +44,9 @@ def show_main_content(settings: dict, data: data.ProcessedData):
     """
     st.title("Rehabilitation Services")
 
-    tab_1, tab_2, tab_3 = st.tabs(["KPI & Productivity", "Calculations", "Data"])
+    tab_1, tab_2, tab_3, tab_4 = st.tabs(
+        ["KPI & Productivity", "FTE", "Calculations", "Data"]
+    )
     s = data.stats
 
     with tab_1:
@@ -68,9 +79,20 @@ def show_main_content(settings: dict, data: data.ProcessedData):
         )
 
     with tab_2:
-        st.write(s)
+        col_1, col_2, col_3, col_4 = st.columns(4)
+        col_2.metric("Hours Paid (Pay Period)", s["pay_period_hours_paid"])
+        col_3.metric("YTD Hours Paid", s["ytd_hours_paid"])
+
+        src = data.raw.fte_per_pay_period
+        fig = px.bar(
+            src, title="FTE per Pay Period", x="Pay Period", y="FTEs", text_auto="i"
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
     with tab_3:
+        st.write(s)
+
+    with tab_4:
         st.header("Revenue")
         st.write(data.raw.revenue)
         st.header("Deductions")
@@ -81,6 +103,10 @@ def show_main_content(settings: dict, data: data.ProcessedData):
         st.write(data.raw.volume)
         st.header("Hours")
         st.write(data.raw.hours)
+        st.header("Paid Hours")
+        st.write(data.raw.fte_hours_paid)
+        st.header("Paid FTEs")
+        st.write(data.raw.fte_per_pay_period)
 
 
 def _format_finance(n):

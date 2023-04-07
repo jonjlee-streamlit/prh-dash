@@ -42,15 +42,17 @@ def show_main():
     with st.spinner("Initializing..."):
         src_data = data.extract_from(files)
 
-    # Process the source data by partitioning it and precalculating statistics
-    processed_data = data.process(src_data)
-
     # Show sidebar and retrieve user specified configuration options
     settings = ui.show_settings()
+
+    # Process the source data by partitioning it and precalculating statistics
+    processed_data = data.process(settings, src_data)
 
     # Show main content
     ui.show_main_content(settings, processed_data)
 
 
-st.set_page_config(page_title="PRH Dashboard", layout="centered")
+st.set_page_config(
+    page_title="PRH Dashboard", layout="centered", initial_sidebar_state="auto"
+)
 run()
