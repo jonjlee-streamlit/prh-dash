@@ -44,8 +44,6 @@ def show_main():
 
     # Process the source data by partitioning it and precalculating statistics
     processed_data = data.process(src_data)
-    st.write(src_data.values)
-    st.write(processed_data.stats)
 
     # Show sidebar and retrieve user specified configuration options
     settings = ui.show_settings()

@@ -108,14 +108,14 @@ def _calc_stats(raw: RawData) -> dict:
     v["budget_revenue_per_volume"] = (
         v["ytd_budget_net_revenue"] / v["ytd_budget_volume"]
     )
-    v["variance_revenue_per_volume"] = (
-        v["actual_revenue_per_volume"] / v["budget_revenue_per_volume"] - 1
+    v["variance_revenue_per_volume"] = round(
+        (v["actual_revenue_per_volume"] / v["budget_revenue_per_volume"] - 1) * 100
     )
 
     v["actual_expense_per_volume"] = v["ytd_actual_expense"] / v["ytd_actual_volume"]
     v["budget_expense_per_volume"] = v["ytd_budget_expense"] / v["ytd_budget_volume"]
-    v["variance_expense_per_volume"] = (
-        v["actual_expense_per_volume"] / v["budget_expense_per_volume"] - 1
+    v["variance_expense_per_volume"] = round(
+        (v["actual_expense_per_volume"] / v["budget_expense_per_volume"] - 1) * 100
     )
 
     # Productivity. Standard target hours per volume is statically defined.

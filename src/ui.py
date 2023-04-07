@@ -29,8 +29,23 @@ def show_settings() -> dict:
     return {}
 
 
-def show_main_content(settings: dict, processed_data: data.ProcessedData):
+def show_main_content(settings: dict, data: data.ProcessedData):
     """
     Render main content of the app, given the user options from the side bar and pre-processed data.
     """
-    st.title("KPI & Productivity")
+    st.title("Pullman Regional Hospital")
+
+    st.header("KPIs")
+    kpi_1, kpi_2, _kpi_3 = st.columns(3)
+    kpi_1.metric(
+        "Revenue per Encounter",
+        "$%s" % round(data.stats["actual_revenue_per_volume"]),
+        "%s%%" % data.stats["variance_revenue_per_volume"],
+    )
+
+    kpi_2.metric(
+        "Expense per Encounter",
+        "$%s" % round(data.stats["actual_expense_per_volume"]),
+        delta="%s%%" % data.stats["variance_expense_per_volume"],
+        delta_color="inverse",
+    )
