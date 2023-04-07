@@ -44,13 +44,13 @@ def show_main_content(settings: dict, data: data.ProcessedData):
         kpi_1.metric(
             "Revenue per Encounter",
             "$%s" % round(s["actual_revenue_per_volume"]),
-            "%s%%" % s["variance_revenue_per_volume"],
+            "%s%% from target" % s["variance_revenue_per_volume"],
         )
 
         kpi_2.metric(
             "Expense per Encounter",
             "$%s" % round(s["actual_expense_per_volume"]),
-            delta="%s%%" % s["variance_expense_per_volume"],
+            delta="%s%% from target" % s["variance_expense_per_volume"],
             delta_color="inverse",
         )
 
@@ -60,10 +60,17 @@ def show_main_content(settings: dict, data: data.ProcessedData):
         prod_2.metric("Target Hours per Encounter", s["target_hours_per_volume"])
         prod_3.metric("FTE Variance", round(s["fte_variance"], 2))
 
-        prod_2.metric(
-            "Dollar Impact",
-            "$%s" % round(s["fte_variance_dollars"]),
+        v = s["fte_variance_dollars"]
+        prod_2.markdown(
+            "<p style='font-size:14px;'>Dollar Impact</p>"
+            + f"<p style='margin-top:-15px; font-size:2rem; color:{'rgb(255, 43, 43)' if v < 0 else 'rgb(9, 171, 59)'}'>{_format_finance(v)}</p>",
+            unsafe_allow_html=True,
         )
 
     with tab_2:
         st.write(s)
+
+
+def _format_finance(n):
+    """Return a number formatted a finance amount - dollar sign, two decimal places, commas, negative values wrapped in parens"""
+    return "${0:,.2f}".format(n) if n >= 0 else "(${0:,.2f})".format(abs(n))
