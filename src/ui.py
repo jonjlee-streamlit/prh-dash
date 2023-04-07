@@ -35,7 +35,7 @@ def show_main_content(settings: dict, data: data.ProcessedData):
     """
     st.title("Rehabilitation Services")
 
-    tab_1, tab_2 = st.tabs(["KPI & Productivity", "Calculations"])
+    tab_1, tab_2, tab_3 = st.tabs(["KPI & Productivity", "Calculations", "Data"])
     s = data.stats
 
     with tab_1:
@@ -69,6 +69,18 @@ def show_main_content(settings: dict, data: data.ProcessedData):
 
     with tab_2:
         st.write(s)
+
+    with tab_3:
+        st.header("Revenue")
+        st.write(data.raw.revenue)
+        st.header("Deductions")
+        st.write(data.raw.deductions)
+        st.header("Expenses")
+        st.write(data.raw.expenses)
+        st.header("Volume")
+        st.write(data.raw.volume)
+        st.header("Hours")
+        st.write(data.raw.hours)
 
 
 def _format_finance(n):
