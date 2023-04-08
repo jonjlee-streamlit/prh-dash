@@ -43,6 +43,7 @@ def show_main():
         src_data = data.extract_from(files)
 
     # Show sidebar and retrieve user specified configuration options
+    add_logo()
     settings = ui.show_settings()
 
     # Process the source data by partitioning it and precalculating statistics
@@ -50,6 +51,22 @@ def show_main():
 
     # Show main content
     ui.show_main_content(settings, processed_data)
+
+
+def add_logo():
+    st.markdown(
+        """
+        <style>
+            [data-testid="stSidebar"] {
+                background-image: url(https://www.pullmanregional.org/hubfs/PullmanRegionalHospital_December2019/Image/logo.svg);
+                background-repeat: no-repeat;
+                padding-top: 0px;
+                background-position: 80px 20px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 st.set_page_config(

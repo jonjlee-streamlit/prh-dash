@@ -45,7 +45,7 @@ def show_main_content(settings: dict, data: data.ProcessedData):
     st.title("Rehabilitation Services")
 
     tab_1, tab_2, tab_3, tab_4 = st.tabs(
-        ["KPI & Productivity", "FTE", "Calculations", "Data"]
+        ["KPI & Productivity", "FTE", "Data", "Calculations"]
     )
     s = data.stats
 
@@ -89,10 +89,10 @@ def show_main_content(settings: dict, data: data.ProcessedData):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    with tab_3:
+    with tab_4:
         st.write(s)
 
-    with tab_4:
+    with tab_3:
         st.header("Revenue")
         st.write(data.raw.revenue)
         st.header("Deductions")

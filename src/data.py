@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+import streamlit as st
 from dataclasses import dataclass
 from .source_data import RawData, parse
 
@@ -18,6 +19,7 @@ class ProcessedData:
     stats: dict
 
 
+@st.cache_data(show_spinner=False)
 def extract_from(files: list[str]) -> RawData:
     """
     Read and parse a list of source data files, including for example, Excel reports exported from Workday
