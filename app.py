@@ -1,9 +1,13 @@
 import streamlit as st
-from src import route, data_files, data, ui
+from src import auth, route, data_files, data, ui
 
 
 def run():
     """Main streamlit app entry point"""
+    # Authenticate user
+    if not auth.authenticate():
+        return st.stop()
+
     # Handle routing based on query parameters
     query_params = st.experimental_get_query_params()
     route_id = route.route_by_query(query_params)
@@ -37,6 +41,8 @@ def show_main():
     """
     # List of available source data files - eg. XLS reports from Epic, WD, etc.
     files = data_files.get()
+    if files == None or len(files) == 0:
+        return st.write('No data available. Please contact administrator.')
 
     # Read and parse source data
     with st.spinner("Initializing..."):
