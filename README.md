@@ -25,3 +25,4 @@ Sample financial dashboard built on [Streamlit](https://streamlit.io/)
         ````
 * VSCode
     * To be able to run debugger, point to the correct Python instance: `Python: Select Interpreter > select virtual env from pipenv`
+    * To enable formatting with [Black](https://black.readthedocs.io/en/stable/), be sure to install dev dependencies in the virtual environment: `pipenv install --dev`
