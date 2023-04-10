@@ -66,33 +66,32 @@ def show_main_content(settings: dict, data: data.ProcessedData):
             delta_color="inverse",
         )
 
-        show_gauge = col_3.checkbox('Show Gauge Chart Demo')
+        show_gauge = col_3.checkbox("Show Gauge Chart Demo")
         if show_gauge:
             layout = go.Layout(margin=go.layout.Margin(l=25, r=25, t=0))
             fig = go.Figure(
                 go.Indicator(
-                    mode = "gauge+number+delta",
-                    value = 116,
-                    number = {'prefix': "$"},
-                    domain = {'x': [0, 1], 'y': [0, 1]},
-                    delta = {'reference': 87, 'valueformat': '.0%', 'relative': True},
-                    gauge = {
-                        # 'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                        # 'bar': {'color': "darkblue"},
-                        # 'bgcolor': "white",
-                        # 'borderwidth': 2,
-                        # 'bordercolor': "gray",
-                        # 'steps': [
-                        #     {'range': [0, 250], 'color': 'cyan'},
-                        #     {'range': [250, 400], 'color': 'royalblue'}],
-                        'threshold': {
-                            'line': {'color': "#1D201F", 'width': 4},
-                            'thickness': 0.75,
-                            'value': 87}}))
+                    mode="gauge+number+delta",
+                    value=116,
+                    number={"prefix": "$"},
+                    domain={"x": [0, 1], "y": [0, 1]},
+                    delta={"reference": 87, "valueformat": ".0%", "relative": True},
+                    gauge={
+                        "threshold": {
+                            "line": {"color": "#1D201F", "width": 4},
+                            "thickness": 0.75,
+                            "value": 87,
+                        }
+                    },
+                )
+            )
             fig.update_layout(layout, height=225)
             col_3.plotly_chart(fig, use_container_width=True, theme=None, height=100)
-            col_3.markdown("<style>.js-plotly-plot .plotly .svg-container { max-height: 100px }</style>", unsafe_allow_html=True)
-        
+            col_3.markdown(
+                "<style>.js-plotly-plot .plotly .svg-container { max-height: 100px }</style>",
+                unsafe_allow_html=True,
+            )
+
         st.header("Productivity")
         col_1, col_2, col_3 = st.columns(3)
         col_1.metric("Hours per Encounter", round(s["actual_hours_per_volume"], 2))
