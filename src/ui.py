@@ -107,13 +107,7 @@ def show_main_content(settings: dict, data: data.ProcessedData):
 
     with tab_fte:
         styled_df = (
-            data.raw.fte_hours_paid.style.apply(
-                lambda x: [
-                    "font-weight: bold" if i == 0 or i == 4 else "" for i in x.index
-                ],
-                axis=1,
-            )
-            .hide(axis=0)
+            data.raw.fte_hours_paid.style.hide(axis=0)
             .format("{:.2f}", subset=["Current Pay Period", "YTD"])
             .set_table_styles(
                 [
@@ -126,8 +120,12 @@ def show_main_content(settings: dict, data: data.ProcessedData):
                         "props": [("border-bottom", "1px solid black")],
                     },
                     {
-                        "selector": "tr:nth-child(5) td:nth-child(2), tr:nth-child(5) td:nth-child(3)",
+                        "selector": "tr:last-child td:nth-child(2), tr:last-child td:nth-child(3)",
                         "props": [("border-bottom", "2px solid black")],
+                    },
+                    {
+                        "selector": "tr:last-child",
+                        "props": [("font-weight", "bold")],
                     },
                 ]
             )
@@ -137,9 +135,7 @@ def show_main_content(settings: dict, data: data.ProcessedData):
         # col_3.metric("YTD Hours Paid", s["ytd_hours_paid"])
 
         src = data.raw.fte_per_pay_period
-        fig = px.bar(
-            src, title="FTE per Pay Period", x="Pay Period", y="FTEs", text_auto="i"
-        )
+        fig = px.bar(src, x="Pay Period", y="FTEs", text_auto="i")
         fig.add_shape(
             type="line",
             x0=src["Pay Period"].iloc[0],
