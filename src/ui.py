@@ -96,14 +96,6 @@ def show_main_content(settings: dict, data: data.ProcessedData):
         st.write(data.raw.deductions)
         st.header("Expenses")
         st.write(data.raw.expenses)
-        st.header("Volume")
-        st.write(data.raw.volume)
-        st.header("Hours")
-        st.write(data.raw.hours)
-        st.header("Paid Hours")
-        st.write(data.raw.fte_hours_paid)
-        st.header("Paid FTEs")
-        st.write(data.raw.fte_per_pay_period)
 
     with tab_fte:
         styled_df = (
@@ -167,6 +159,25 @@ def show_main_content(settings: dict, data: data.ProcessedData):
             "FTE Requested", min_value=0.25, max_value=100.0, value=33.0, step=0.25
         )
         fte_results = fte_calc.calc(fte_requested)
+
+        st.markdown(
+            f"""
+            <center>
+            <table style="width: 100%; margin-bottom: 25px;">
+                <tr>
+                    <td style="width: 100px; text-align: center;">{'{0:,.0f}'.format(fte_results.productive_hours_needed_for_volume)}</td>
+                    <td>Productive man-hours needed for projected volume</td>
+                </tr>
+                <tr>
+                    <td style="text-align: center; font-weight: bold; background: #ffff00;">{'{0:,.0f}'.format(fte_results.standard_volume)}</td>
+                    <td>Standard Volume</td>
+                </tr>
+            </table>
+            </center>
+            """,
+            unsafe_allow_html=True,
+        )
+
         col_1, col_2 = st.columns(2)
         col_1.metric("Statistical Impact", round(fte_results.statistical_impact_volume))
         col_2.metric(
