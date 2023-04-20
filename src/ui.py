@@ -28,14 +28,14 @@ def show_settings() -> dict:
     """
     Render the sidebar and return the dict with configuration options set by the user.
     """
-    with st.sidebar:
-        st.header("Dashboard Settings")
-        target_hours_per_volume = st.slider(
-            "Target Man-Hours per Encounter", 2.0, 10.0, 4.24
-        )
+    # with st.sidebar:
+    #     st.header("Dashboard Settings")
+    #     target_hours_per_volume = st.slider(
+    #         "Target Man-Hours per Encounter", 2.0, 10.0, 4.24
+    #     )
 
     return {
-        "target_hours_per_volume": target_hours_per_volume,
+        "target_hours_per_volume": 4.24,
     }
 
 
@@ -52,48 +52,31 @@ def show_main_content(settings: dict, data: data.ProcessedData):
 
     with tab_1:
         st.header("KPIs")
-        col_1, col_2, col_3 = st.columns(3)
+        col_1, col_2 = st.columns(2)
         col_1.metric(
             "Revenue per Encounter",
             "$%s" % round(s["actual_revenue_per_volume"]),
-            "%s%% from target" % s["variance_revenue_per_volume"],
+            f"{s['variance_revenue_per_volume']}% {'above' if s['actual_revenue_per_volume'] >= s['target_revenue_per_volume'] else 'below'} target",
+        )
+        col_2.metric(
+            "Target Revenue per Encounter",
+            f"${round(s['target_revenue_per_volume'])}",
         )
 
-        col_2.metric(
+        col_1, col_2 = st.columns(2)
+        col_1.metric(
             "Expense per Encounter",
             "$%s" % round(s["actual_expense_per_volume"]),
-            delta="%s%% from target" % s["variance_expense_per_volume"],
+            delta=f"{s['variance_expense_per_volume']}% {'above' if s['actual_expense_per_volume'] >= s['target_expense_per_volume'] else 'below'} target",
             delta_color="inverse",
         )
-
-        show_gauge = col_3.checkbox("Show Gauge Chart Demo")
-        if show_gauge:
-            layout = go.Layout(margin=go.layout.Margin(l=25, r=25, t=0))
-            fig = go.Figure(
-                go.Indicator(
-                    mode="gauge+number+delta",
-                    value=116,
-                    number={"prefix": "$"},
-                    domain={"x": [0, 1], "y": [0, 1]},
-                    delta={"reference": 87, "valueformat": ".0%", "relative": True},
-                    gauge={
-                        "threshold": {
-                            "line": {"color": "#1D201F", "width": 4},
-                            "thickness": 0.75,
-                            "value": 87,
-                        }
-                    },
-                )
-            )
-            fig.update_layout(layout, height=225)
-            col_3.plotly_chart(fig, use_container_width=True, theme=None, height=100)
-            col_3.markdown(
-                "<style>.js-plotly-plot .plotly .svg-container { max-height: 100px }</style>",
-                unsafe_allow_html=True,
-            )
+        col_2.metric(
+            "Target Expense per Encounter",
+            f"${round(s['target_expense_per_volume'])}",
+        )
 
         st.header("Productivity")
-        col_1, col_2, col_3 = st.columns(3)
+        col_1, col_2 = st.columns(2)
         col_1.metric("Hours per Encounter", round(s["actual_hours_per_volume"], 2))
         col_1.metric("Target Hours per Encounter", s["target_hours_per_volume"])
         col_1.metric("FTE Variance", round(s["fte_variance"], 2))
@@ -113,6 +96,17 @@ def show_main_content(settings: dict, data: data.ProcessedData):
         src = data.raw.fte_per_pay_period
         fig = px.bar(
             src, title="FTE per Pay Period", x="Pay Period", y="FTEs", text_auto="i"
+        )
+        fig.add_shape(
+            type="line",
+            x0=src["Pay Period"].iloc[0],
+            x1=src["Pay Period"].iloc[-1],
+            y0=32,
+            y1=32,
+            yref="y",
+            xref="x",
+            line=dict(color="red", width=3),
+            layer="below",
         )
         st.plotly_chart(fig, use_container_width=True)
 

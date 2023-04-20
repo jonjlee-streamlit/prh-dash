@@ -42,7 +42,7 @@ def show_main():
     # List of available source data files - eg. XLS reports from Epic, WD, etc.
     files = data_files.get()
     if files == None or len(files) == 0:
-        return st.write('No data available. Please contact administrator.')
+        return st.write("No data available. Please contact administrator.")
 
     # Read and parse source data
     with st.spinner("Initializing..."):
@@ -60,6 +60,12 @@ def show_main():
 
 
 def add_logo():
+    # Logo in main content
+    st.image(
+        "https://www.pullmanregional.org/hubfs/PullmanRegionalHospital_December2019/Image/logo.svg"
+    )
+
+    # Logo in side bar - https://discuss.streamlit.io/t/put-logo-and-title-above-on-top-of-page-navigation-in-sidebar-of-multipage-app/28213/5
     st.markdown(
         """
         <style>
