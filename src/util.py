@@ -1,0 +1,25 @@
+"""
+Utility functions
+"""
+
+import pandas as pd
+from openpyxl.utils import cell
+import re
+
+def df_get_range(df, cell_range):
+    """
+    Returns a subset of a dataframe using excel-like A1 notation.
+    For example, df_get_range(df, "B2") returns the value in column 2, row 2,
+    and df_get_range(df, "B2:D5") returns a dataframe with data from columns 2-4, rows 2-5.
+    """
+    # Check if provided range is a single coordinate or range
+    if ':' in cell_range:
+        cell_refs = re.split('[:]', cell_range)
+        start_row, start_col = cell.coordinate_to_tuple(cell_refs[0])
+        end_row, end_col = cell.coordinate_to_tuple(cell_refs[1])
+
+        return df.iloc[start_row - 1:end_row, start_col - 1:end_col]
+    else:
+        row, col = cell.coordinate_to_tuple(cell_range)
+        return df.iloc[row - 1, col - 1]
+    

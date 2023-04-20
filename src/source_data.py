@@ -3,6 +3,7 @@ Defines data classes that hold raw and processed source data
 """
 import pandas as pd
 from dataclasses import dataclass
+from .util import df_get_range
 
 # Column names from Income Statement sheet, columns B:J
 _INCOME_STMT_COLUMNS = [
@@ -116,7 +117,7 @@ def _parse_income_stmt(df):
     expenses = _rows(df, "Expenses", "Total Operating Expenses")
 
     # Extract standalone values not in a table
-    values = {"income_stmt_month": df.iloc[2, 1]}  # B3
+    values = {"income_stmt_month": df_get_range(df, "B3")}  # B3
 
     return revenue, deductions, expenses, values
 
@@ -125,19 +126,19 @@ def _parse_volume_stats(df):
     """
     Read the volume and productive/non-productive hours data from the source Excel report
     """
-    # Grab the data in B3:O6 (.loc first dimension is rows, second is columns)
-    volume = df.loc[3:5, 1:14]
+    # Grab the data from volume table on STATS sheet
+    volume = df_get_range(df, "B4:O6")
     volume.columns = _STATS_COLUMNS
 
-    # Grab the data in B22:O24
-    hours = df.loc[21:23, 1:14]
+    # Grab the data from the hours table on STATS sheet
+    hours = df_get_range(df, "B22:O24")
     hours.columns = _STATS_COLUMNS
 
     # Extract standalone values not in a table
     values = {
-        "std_fte_hours": df.iloc[20][2],  # C21
-        "pct_hours_productive": df.iloc[20][3],  # D21
-        "avg_hourly_rate": df.iloc[20][4],  # E21
+        "std_fte_hours": df_get_range(df, "C21"),
+        "pct_hours_productive": df_get_range(df, "D21"),
+        "avg_hourly_rate": df_get_range(df, "E21"),
     }
 
     return volume, hours, values
@@ -147,15 +148,15 @@ def _parse_fte_stats(df):
     """
     Read the FTE information from the source Excel report
     """
-    # Grab the data in K6:L31 (.loc first dimension is rows, second is columns)
-    ftes_per_pay_period = df.loc[5:30, 10:11]
+    # Grab the data in the Paid FTE's table
+    ftes_per_pay_period = df_get_range(df, "K6:L31")
     ftes_per_pay_period.columns = _FTE_COLUMNS
     ftes_per_pay_period.set_index("Pay Period")
     ftes_per_pay_period["Pay Period"] = ftes_per_pay_period["Pay Period"].astype(
         "category"
     )
 
-    # Table from B6:D10 with hours paid
-    fte_hours_paid = df.loc[5:9, 1:3]
+    # Table with productive/non-productive hours paid
+    fte_hours_paid = df_get_range(df, "B6:D10")
 
     return ftes_per_pay_period, fte_hours_paid
