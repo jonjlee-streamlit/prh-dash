@@ -158,5 +158,9 @@ def _parse_fte_stats(df):
 
     # Table with productive/non-productive hours paid
     fte_hours_paid = df_get_range(df, "B6:D10")
+    fte_hours_paid.columns = ["", "Current Pay Period", "YTD"]
+    fte_hours_paid = fte_hours_paid.astype(
+        {"Current Pay Period": "float", "YTD": "float"}
+    )
 
     return ftes_per_pay_period, fte_hours_paid

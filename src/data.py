@@ -90,7 +90,7 @@ def _merge(segments: list[RawData]) -> RawData:
 
 def _calc_stats(settings: dict, raw: RawData) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
-    v = {
+    s = {
         # Totals rows from Income Statement
         "ytd_actual_revenue": raw.revenue["Year Actual"].iloc[-1],
         "ytd_budget_revenue": raw.revenue["Year Budget"].iloc[-1],
@@ -115,33 +115,33 @@ def _calc_stats(settings: dict, raw: RawData) -> dict:
     }
 
     # KPIs
-    v["actual_revenue_per_volume"] = (
-        v["ytd_actual_net_revenue"] / v["ytd_actual_volume"]
+    s["actual_revenue_per_volume"] = (
+        s["ytd_actual_net_revenue"] / s["ytd_actual_volume"]
     )
-    v["target_revenue_per_volume"] = (
-        v["ytd_budget_net_revenue"] / v["ytd_budget_volume"]
+    s["target_revenue_per_volume"] = (
+        s["ytd_budget_net_revenue"] / s["ytd_budget_volume"]
     )
-    v["variance_revenue_per_volume"] = round(
-        (v["actual_revenue_per_volume"] / v["target_revenue_per_volume"] - 1) * 100
+    s["variance_revenue_per_volume"] = round(
+        (s["actual_revenue_per_volume"] / s["target_revenue_per_volume"] - 1) * 100
     )
 
-    v["actual_expense_per_volume"] = v["ytd_actual_expense"] / v["ytd_actual_volume"]
-    v["target_expense_per_volume"] = v["ytd_budget_expense"] / v["ytd_budget_volume"]
-    v["variance_expense_per_volume"] = round(
-        (v["actual_expense_per_volume"] / v["target_expense_per_volume"] - 1) * 100
+    s["actual_expense_per_volume"] = s["ytd_actual_expense"] / s["ytd_actual_volume"]
+    s["target_expense_per_volume"] = s["ytd_budget_expense"] / s["ytd_budget_volume"]
+    s["variance_expense_per_volume"] = round(
+        (s["actual_expense_per_volume"] / s["target_expense_per_volume"] - 1) * 100
     )
 
     # Productivity. Standard target hours per volume is statically defined.
-    v["actual_hours_per_volume"] = v["ytd_productive_hours"] / v["ytd_actual_volume"]
-    v["target_hours_per_volume"] = settings["target_hours_per_volume"]
-    v["variance_hours_per_volume"] = (
-        v["target_hours_per_volume"] - v["actual_hours_per_volume"]
+    s["actual_hours_per_volume"] = s["ytd_productive_hours"] / s["ytd_actual_volume"]
+    s["target_hours_per_volume"] = settings["target_hours_per_volume"]
+    s["variance_hours_per_volume"] = (
+        s["target_hours_per_volume"] - s["actual_hours_per_volume"]
     )
-    v["fte_variance"] = (v["variance_hours_per_volume"] * v["ytd_actual_volume"]) / (
+    s["fte_variance"] = (s["variance_hours_per_volume"] * s["ytd_actual_volume"]) / (
         raw.values["std_fte_hours"] * raw.values["pct_hours_productive"]
     )
-    v["fte_variance_dollars"] = (
-        v["variance_hours_per_volume"] * v["ytd_actual_volume"]
+    s["fte_variance_dollars"] = (
+        s["variance_hours_per_volume"] * s["ytd_actual_volume"]
     ) * (raw.values["avg_hourly_rate"])
 
-    return v
+    return s
