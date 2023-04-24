@@ -57,6 +57,7 @@ def _read_file(filename: str) -> bytes:
 def _merge(segments: list[RawData]) -> RawData:
     """Merges data from several RawData objects which hold data from the source data files"""
     # Concatenate all DataFrames from segments
+    income_statement = pd.concat([segment.income_statement for segment in segments], ignore_index=True)
     revenue = pd.concat([segment.revenue for segment in segments], ignore_index=True)
     deductions = pd.concat(
         [segment.deductions for segment in segments], ignore_index=True
@@ -76,6 +77,7 @@ def _merge(segments: list[RawData]) -> RawData:
 
     # Create a new RawData instance with the concatenated DataFrame
     merged_data = RawData(
+        income_statement=income_statement,
         revenue=revenue,
         deductions=deductions,
         expenses=expenses,
@@ -92,16 +94,16 @@ def _calc_stats(settings: dict, raw: RawData) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
     s = {
         # Totals rows from Income Statement
-        "ytd_actual_revenue": raw.revenue["Year Actual"].iloc[-1],
-        "ytd_budget_revenue": raw.revenue["Year Budget"].iloc[-1],
-        "ytd_actual_deductions": raw.deductions["Year Actual"].iloc[-1],
-        "ytd_budget_deductions": raw.deductions["Year Budget"].iloc[-1],
-        "ytd_actual_net_revenue": raw.revenue["Year Actual"].iloc[-1]
-        - raw.deductions["Year Actual"].iloc[-1],
-        "ytd_budget_net_revenue": raw.revenue["Year Budget"].iloc[-1]
-        - raw.deductions["Year Budget"].iloc[-1],
-        "ytd_actual_expense": raw.expenses["Year Actual"].iloc[-1],
-        "ytd_budget_expense": raw.expenses["Year Budget"].iloc[-1],
+        "ytd_actual_revenue": raw.revenue["Actual (Year)"].iloc[-1],
+        "ytd_budget_revenue": raw.revenue["Budget (Year)"].iloc[-1],
+        "ytd_actual_deductions": raw.deductions["Actual (Year)"].iloc[-1],
+        "ytd_budget_deductions": raw.deductions["Budget (Year)"].iloc[-1],
+        "ytd_actual_net_revenue": raw.revenue["Actual (Year)"].iloc[-1]
+        - raw.deductions["Actual (Year)"].iloc[-1],
+        "ytd_budget_net_revenue": raw.revenue["Budget (Year)"].iloc[-1]
+        - raw.deductions["Budget (Year)"].iloc[-1],
+        "ytd_actual_expense": raw.expenses["Actual (Year)"].iloc[-1],
+        "ytd_budget_expense": raw.expenses["Budget (Year)"].iloc[-1],
         # Totals column for Volume table, O4:O6
         "ytd_actual_volume": raw.volume.iloc[0, -1],
         "ytd_budget_volume": raw.volume.iloc[1, -1],

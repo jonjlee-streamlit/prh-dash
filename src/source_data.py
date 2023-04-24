@@ -8,15 +8,15 @@ from .util import df_get_range
 # Column names from Income Statement sheet, columns B:J
 _INCOME_STMT_COLUMNS = [
     "Ledger Account",
-    "Month Actual",
-    "Month Budget",
-    "Month Variance",
-    "Month Variance %",
+    "Actual (Month)",
+    "Budget (Month)",
+    "Variance (Month)",
+    "Variance % (Month)",
     "",
-    "Year Actual",
-    "Year Budget",
-    "Year Variance",
-    "Year Variance %",
+    "Actual (Year)",
+    "Budget (Year)",
+    "Variance (Year)",
+    "Variance % (Year)",
 ]
 # Column names from STATS sheet, columns B:N
 _STATS_COLUMNS = [
@@ -44,6 +44,7 @@ class RawData:
     """Represents raw data read from Excel spreadsheets generated from various sources including Epic and Workday"""
 
     # Data from Workday
+    income_statement: pd.DataFrame
     revenue: pd.DataFrame
     deductions: pd.DataFrame
     expenses: pd.DataFrame
@@ -67,12 +68,13 @@ def parse(filename: str, contents: bytes) -> RawData:
     volume_stats_df = pd.read_excel(contents, sheet_name="STATS", header=None)
     fte_stats_df = pd.read_excel(contents, sheet_name="FTE", header=None)
 
-    revenue, deductions, expenses, values = _parse_income_stmt(income_stmt_df)
+    income_statement, revenue, deductions, expenses, values = _parse_income_stmt(income_stmt_df)
     volume, hours, volume_values = _parse_volume_stats(volume_stats_df)
     fte_per_pay_period, fte_hours_paid = _parse_fte_stats(fte_stats_df)
     values.update(volume_values)
 
     return RawData(
+        income_statement=income_statement,
         revenue=revenue,
         deductions=deductions,
         expenses=expenses,
@@ -107,6 +109,9 @@ def _parse_income_stmt(df):
         df = df.drop(df.columns[5], axis=1)
         return df
 
+    # Full income statement
+    income_statement = _rows(df, "Ledger Account", "% Contribution (Margin)")
+
     # Revenue table is from the rows containing "Operating Revenues" through "Total Revenue", excluding the first row
     revenue = _rows(df, "Operating Revenues", "Total Revenue")
 
@@ -119,7 +124,7 @@ def _parse_income_stmt(df):
     # Extract standalone values not in a table
     values = {"income_stmt_month": df_get_range(df, "B3")}  # B3
 
-    return revenue, deductions, expenses, values
+    return income_statement, revenue, deductions, expenses, values
 
 
 def _parse_volume_stats(df):

@@ -5,8 +5,10 @@ sidebar for configuration options, main app content, etc.
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-from . import data
+from st_aggrid import AgGrid, GridOptionsBuilder
+from .data import ProcessedData
 from . import fte_calc
+from . import figs
 
 
 def show_update(cur_files: list[str]) -> tuple[list | None, bool]:
@@ -40,7 +42,7 @@ def show_settings() -> dict:
     }
 
 
-def show_main_content(settings: dict, data: data.ProcessedData):
+def show_main_content(settings: dict, data: ProcessedData):
     """
     Render main content of the app, given the user options from the side bar and pre-processed data.
     """
@@ -90,12 +92,7 @@ def show_main_content(settings: dict, data: data.ProcessedData):
         )
 
     with tab_income_stmt:
-        st.header("Revenue")
-        st.write(data.raw.revenue)
-        st.header("Deductions")
-        st.write(data.raw.deductions)
-        st.header("Expenses")
-        st.write(data.raw.expenses)
+        figs.aggrid_income_stmt(data.raw.income_statement)
 
     with tab_fte:
         styled_df = (
