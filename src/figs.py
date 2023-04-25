@@ -5,7 +5,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, JsCode
 
 def aggrid_income_stmt(df):
     # Bold these Ledger Account rows
-    bold_rows=[
+    bold_rows = [
         "Operating Revenues",
         "Total Revenue",
         "Net Revenue",
@@ -15,7 +15,7 @@ def aggrid_income_stmt(df):
         "Contribution Margin",
     ]
     # Build grouping column based on row_groups
-    row_groups=[
+    row_groups = [
         (1, 3),
         (4, 7),
         (12, 19),
@@ -37,7 +37,6 @@ def aggrid_income_stmt(df):
         # Auto-size columns, based width on content, not header
         skipHeaderOnAutoSize=True,
         suppressColumnVirtualisation=True,
-
         # Bold columns based on contents of the Legder Account column
         getRowStyle=JsCode(
             f"""
@@ -49,7 +48,6 @@ def aggrid_income_stmt(df):
             }}
             """
         ),
-
         # Row grouping
         autoGroupColumnDef=dict(
             # Don't show a column name
@@ -60,8 +58,7 @@ def aggrid_income_stmt(df):
             cellRendererParams=dict(
                 suppressCount=True, innerRenderer=JsCode("function() {}")
             ),
-
-            # For grouped rows (those that have a hier value with a /), use the 
+            # For grouped rows (those that have a hier value with a /), use the
             # default rendere agGroupCellRenderer, which will show the toggle button
             # and call innerRenderer to determine the text to show.
             #
@@ -84,19 +81,17 @@ def aggrid_income_stmt(df):
                 """,
             ),
         ),
-
         # Row grouping is actually using AgGrid Tree Data mode. See _hierarchy_from_row_groups() for
         # how the tree paths are generated.
         treeData=True,
         getDataPath=JsCode("function(data) { return data.hier.split('/'); }"),
-
         animateRows=True,
         # groupDefaultExpanded=-1,
     )
     # gb.configure_column("i", headerName="Row", valueGetter="node.rowIndex", pinned="left", width=30)
     gb.configure_column("hier", hide=True)
 
-    # Configure decimals, commas, etc when displaying of money and percent columns 
+    # Configure decimals, commas, etc when displaying of money and percent columns
     gb.configure_columns(
         [
             "Actual (Month)",
@@ -121,12 +116,12 @@ def aggrid_income_stmt(df):
             "function(params) { return (params.value == null) ? params.value : (params.value < 0 ? '(' + Math.abs(Math.round(params.value * 100)) + '%)' : Math.round(params.value * 100) + '%') }"
         ),
     )
-    
+
     # Finally show data table
     AgGrid(
         df,
         gridOptions=gb.build(),
-        columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS,
+        # columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS,
         allow_unsafe_jscode=True,
     )
 
