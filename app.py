@@ -75,6 +75,9 @@ def add_logo():
                 padding-top: 0px;
                 background-position: 80px 20px;
             }
+            .element-container iframe {
+                min-height: 810px;
+            }
         </style>
         """,
         unsafe_allow_html=True,
