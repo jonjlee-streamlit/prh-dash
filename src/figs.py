@@ -19,14 +19,27 @@ def aggrid_income_stmt(df):
         (1, 3),
         (4, 7),
         (12, 19),
+        (14, 15),
+        (16, 17),
         (23, 27),
         (28, 52),
+        (29, 35),
+        (36, 43),
+        (44, 46),
         (53, 59),
+        (54, 55),
+        (56, 57),
         (60, 70),
+        (61, 66),
+        (67, 68),
         (71, 74),
         (75, 83),
+        (76, 77),
+        (78, 81),
         (84, 87),
         (90, 103),
+        (91, 92),
+        (93, 98),
         (104, 105),
     ]
     df["hier"] = _hierarchy_from_row_groups(row_groups, len(df.index))
@@ -52,7 +65,7 @@ def aggrid_income_stmt(df):
         autoGroupColumnDef=dict(
             # Don't show a column name
             headerName="",
-            maxWidth=40,
+            maxWidth=60,
             # Don't add suffice with count of grouped up rows - eg. "> Supplies (10)"
             # And innerRenderer() returning null results in blank text for grouped rows
             cellRendererParams=dict(
@@ -138,6 +151,6 @@ def _hierarchy_from_row_groups(groups, len):
         for group_start, group_end in groups:
             if group_start < i and group_end >= i:
                 prefix = f"{prefix}{group_start}/"
-                res[i] = prefix + res[i]
+                res[i] = prefix + str(i)
 
     return res
