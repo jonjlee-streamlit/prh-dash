@@ -93,6 +93,16 @@ def show_main_content(settings: dict, data: ProcessedData):
 
     with tab_income_stmt:
         figs.aggrid_income_stmt(data.raw.income_statement)
+        st.markdown(
+            """
+            <style>
+                .element-container iframe {
+                    min-height: 810px;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
     with tab_fte:
         styled_df = (

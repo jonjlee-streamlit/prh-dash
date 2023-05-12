@@ -1,6 +1,6 @@
 import streamlit as st
-from src import auth, route, data_files, data, ui
-
+from src import auth, route, data_files, data, ui, util
+from src.dept import rads_app, therapy_app
 
 def run():
     """Main streamlit app entry point"""
@@ -12,11 +12,20 @@ def run():
     query_params = st.experimental_get_query_params()
     route_id = route.route_by_query(query_params)
 
-    # Render page based on the route
+    # For updating data, show update page and stop before loading data
     if route_id == route.UPDATE:
-        show_update()
-    else:
-        show_main()
+        return show_update()
+
+    # Load source data
+    src_data = load_data()
+    if src_data is None:
+        return st.write("No data available. Please contact administrator.")
+
+    # Render page based on the route
+    if route_id == route.MAIN:     
+        therapy_app(src_data)
+    elif route_id == route.RADS:
+        rads_app(src_data)
 
 
 def show_update():
@@ -35,21 +44,26 @@ def show_update():
         st.cache_data.clear()
 
 
-def show_main():
+def load_data():
     """
-    Render the main application
+    Reads and caches all source data files
     """
     # List of available source data files - eg. XLS reports from Epic, WD, etc.
     files = data_files.get()
     if files == None or len(files) == 0:
-        return st.write("No data available. Please contact administrator.")
+        return None
 
-    # Read and parse source data
+    # Read, parse, and cache (via @st.cache_data) source data
     with st.spinner("Initializing..."):
-        src_data = data.extract_from(files)
+        return data.extract_from(files)
 
+
+def show_main(src_data):
+    """
+    Render the default page
+    """
     # Show sidebar and retrieve user specified configuration options
-    add_logo()
+    util.st_prh_logo()
     settings = ui.show_settings()
 
     # Process the source data by partitioning it and precalculating statistics
@@ -57,31 +71,6 @@ def show_main():
 
     # Show main content
     ui.show_main_content(settings, processed_data)
-
-
-def add_logo():
-    # Logo in main content
-    st.image(
-        "https://www.pullmanregional.org/hubfs/PullmanRegionalHospital_December2019/Image/logo.svg"
-    )
-
-    # Logo in side bar - https://discuss.streamlit.io/t/put-logo-and-title-above-on-top-of-page-navigation-in-sidebar-of-multipage-app/28213/5
-    st.markdown(
-        """
-        <style>
-            [data-testid="stSidebar"] {
-                background-image: url(https://www.pullmanregional.org/hubfs/PullmanRegionalHospital_December2019/Image/logo.svg);
-                background-repeat: no-repeat;
-                padding-top: 0px;
-                background-position: 80px 20px;
-            }
-            .element-container iframe {
-                min-height: 810px;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 st.set_page_config(
