@@ -1,94 +1,25 @@
-import logging
 import pandas as pd
-import streamlit as st
 from dataclasses import dataclass
-from .source_data import RawData, parse
+from ...source_data import RawData
 
 
 @dataclass
-class ProcessedData:
+class TherapyData:
     """Represents processed data including"""
 
     # Original data set
     raw: RawData
 
-    # Processed data set
-    all: pd.DataFrame
-
     # Calculated statistics
     stats: dict
 
 
-@st.cache_data(show_spinner=False)
-def extract_from(files: list[str]) -> RawData:
-    """
-    Read and parse a list of source data files, including for example, Excel reports exported from Workday
-    """
-    # Read all files and merge data into one object
-    segments = []
-    for filename in files:
-        # Fetch and read file into memory
-        contents = _read_file(filename)
-        segment = parse(filename, contents)
-        segments.append(segment)
-
-    raw_data = _merge(segments)
-    return raw_data
-
-
-def process(settings: dict, raw: RawData) -> ProcessedData:
+def process(settings: dict, raw: RawData) -> TherapyData:
     """
     Receives raw source data from extract_from() and user parameters from sidebar. Partitions and computes statistics to be displayed by the app.
     """
     stats = _calc_stats(settings, raw)
-    return ProcessedData(raw=raw, all=None, stats=stats)
-
-
-def _read_file(filename: str) -> bytes:
-    """
-    Wrapper for reading a source data file, returning data as byte array.
-    In the future, will allow for fetching from URL and handling encrypted data.
-    """
-    logging.info("Fetching " + filename)
-    with open(filename, "rb") as f:
-        return f.read()
-
-
-def _merge(segments: list[RawData]) -> RawData:
-    """Merges data from several RawData objects which hold data from the source data files"""
-    # Concatenate all DataFrames from segments
-    income_statement = pd.concat([segment.income_statement for segment in segments], ignore_index=True)
-    revenue = pd.concat([segment.revenue for segment in segments], ignore_index=True)
-    deductions = pd.concat(
-        [segment.deductions for segment in segments], ignore_index=True
-    )
-    expenses = pd.concat([segment.expenses for segment in segments], ignore_index=True)
-    volume = pd.concat([segment.volume for segment in segments], ignore_index=True)
-    hours = pd.concat([segment.hours for segment in segments], ignore_index=True)
-    fte_per_pay_period = pd.concat(
-        [segment.fte_per_pay_period for segment in segments], ignore_index=True
-    )
-    fte_hours_paid = pd.concat(
-        [segment.fte_hours_paid for segment in segments], ignore_index=True
-    )
-
-    # Grab scalar values from each segment
-    values = {k: v for segment in segments for k, v in segment.values.items()}
-
-    # Create a new RawData instance with the concatenated DataFrame
-    merged_data = RawData(
-        income_statement=income_statement,
-        revenue=revenue,
-        deductions=deductions,
-        expenses=expenses,
-        volume=volume,
-        hours=hours,
-        fte_per_pay_period=fte_per_pay_period,
-        fte_hours_paid=fte_hours_paid,
-        values=values,
-    )
-    return merged_data
-
+    return TherapyData(raw=raw, stats=stats)
 
 def _calc_stats(settings: dict, raw: RawData) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""

@@ -1,14 +1,12 @@
 import streamlit as st
 
-from .therapy import data, ui
-from .. import source_data, util
+from . import data, ui
 
-def therapy_app(src_data: source_data.RawData):
+def therapy_page(src_data):
     """
-    Show department specific Streamlit app
+    Show department specific Streamlit page
     """
     # Show sidebar and retrieve user specified configuration options
-    util.st_prh_logo()
     settings = ui.show_settings()
 
     # Process the source data by partitioning it and precalculating statistics

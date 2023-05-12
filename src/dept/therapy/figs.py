@@ -1,4 +1,3 @@
-import pandas as pd
 import streamlit as st
 from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, JsCode
 
@@ -136,6 +135,17 @@ def aggrid_income_stmt(df):
         gridOptions=gb.build(),
         # columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS,
         allow_unsafe_jscode=True,
+    )
+    # Work around to ensure that AgGrid height doesn't collapse when in non-active tab after user interactions
+    st.markdown(
+        """
+        <style>
+            .element-container iframe {
+                min-height: 810px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
 
 

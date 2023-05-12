@@ -1,6 +1,8 @@
 """
 Defines data classes that hold raw and processed source data
 """
+import logging
+import streamlit as st
 import pandas as pd
 from dataclasses import dataclass
 from .util import df_get_range
@@ -59,7 +61,70 @@ class RawData:
     fte_hours_paid: pd.DataFrame
 
 
-def parse(filename: str, contents: bytes) -> RawData:
+@st.cache_data(show_spinner=False)
+def extract_from(files: list[str]) -> RawData:
+    """
+    Read and parse a list of source data files, including for example, Excel reports exported from Workday
+    """
+    # Read all files and merge data into one object
+    segments = []
+    for filename in files:
+        # Fetch and read file into memory
+        contents = _read_file(filename)
+        segment = _parse(filename, contents)
+        segments.append(segment)
+
+    raw_data = _merge(segments)
+    return raw_data
+
+
+def _read_file(filename: str) -> bytes:
+    """
+    Wrapper for reading a source data file, returning data as byte array.
+    In the future, will allow for fetching from URL and handling encrypted data.
+    """
+    logging.info("Fetching " + filename)
+    with open(filename, "rb") as f:
+        return f.read()
+
+
+def _merge(segments: list[RawData]) -> RawData:
+    """Merges data from several RawData objects which hold data from the source data files"""
+    # Concatenate all DataFrames from segments
+    income_statement = pd.concat([segment.income_statement for segment in segments], ignore_index=True)
+    revenue = pd.concat([segment.revenue for segment in segments], ignore_index=True)
+    deductions = pd.concat(
+        [segment.deductions for segment in segments], ignore_index=True
+    )
+    expenses = pd.concat([segment.expenses for segment in segments], ignore_index=True)
+    volume = pd.concat([segment.volume for segment in segments], ignore_index=True)
+    hours = pd.concat([segment.hours for segment in segments], ignore_index=True)
+    fte_per_pay_period = pd.concat(
+        [segment.fte_per_pay_period for segment in segments], ignore_index=True
+    )
+    fte_hours_paid = pd.concat(
+        [segment.fte_hours_paid for segment in segments], ignore_index=True
+    )
+
+    # Grab scalar values from each segment
+    values = {k: v for segment in segments for k, v in segment.values.items()}
+
+    # Create a new RawData instance with the concatenated DataFrame
+    merged_data = RawData(
+        income_statement=income_statement,
+        revenue=revenue,
+        deductions=deductions,
+        expenses=expenses,
+        volume=volume,
+        hours=hours,
+        fte_per_pay_period=fte_per_pay_period,
+        fte_hours_paid=fte_hours_paid,
+        values=values,
+    )
+    return merged_data
+
+
+def _parse(filename: str, contents: bytes) -> RawData:
     """
     Detects the file type using a filename and its contents and converts it to a DataFrame containing the raw data.
     """

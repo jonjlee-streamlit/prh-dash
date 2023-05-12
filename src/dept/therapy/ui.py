@@ -4,27 +4,10 @@ sidebar for configuration options, main app content, etc.
 """
 import streamlit as st
 import plotly.express as px
-import plotly.graph_objects as go
-from st_aggrid import AgGrid, GridOptionsBuilder
-from .data import ProcessedData
-from . import fte_calc
+
 from . import figs
-
-
-def show_update(cur_files: list[str]) -> tuple[list | None, bool]:
-    """
-    Show the update data files screen
-    """
-    st.header("Update data files")
-    st.markdown(
-        '<a href="/" target="_self">Go to dashboard &gt;</a>', unsafe_allow_html=True
-    )
-    if cur_files:
-        st.write("Current data files:")
-        st.write(cur_files)
-    remove_existing = st.checkbox("Remove existing files before upload")
-    files = st.file_uploader("Select files to upload", accept_multiple_files=True)
-    return files, remove_existing
+from .data import TherapyData
+from ... import fte_calc, util
 
 
 def show_settings() -> dict:
@@ -42,10 +25,11 @@ def show_settings() -> dict:
     }
 
 
-def show_main_content(settings: dict, data: ProcessedData):
+def show(settings: dict, data: TherapyData):
     """
     Render main content of the app, given the user options from the side bar and pre-processed data.
     """
+    util.st_prh_logo()
     st.title("Rehabilitation Services")
 
     tab_kpis, tab_income_stmt, tab_fte, tab_fte_calc = st.tabs(
@@ -93,16 +77,6 @@ def show_main_content(settings: dict, data: ProcessedData):
 
     with tab_income_stmt:
         figs.aggrid_income_stmt(data.raw.income_statement)
-        st.markdown(
-            """
-            <style>
-                .element-container iframe {
-                    min-height: 810px;
-                }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
 
     with tab_fte:
         styled_df = (

@@ -1,2 +1,2 @@
-from .rads import rads_app
-from .therapy import therapy_app
+from .rads import rads_page
+from .therapy import therapy_page

@@ -1,6 +1,6 @@
 import streamlit as st
-from src import auth, route, data_files, data, ui, util
-from src.dept import rads_app, therapy_app
+from src import auth, route, data_files, source_data, update
+from src.dept import rads_page, therapy_page
 
 def run():
     """Main streamlit app entry point"""
@@ -14,7 +14,7 @@ def run():
 
     # For updating data, show update page and stop before loading data
     if route_id == route.UPDATE:
-        return show_update()
+        return update.show_page()
 
     # Load source data
     src_data = load_data()
@@ -23,25 +23,9 @@ def run():
 
     # Render page based on the route
     if route_id == route.MAIN:     
-        therapy_app(src_data)
+        therapy_page(src_data)
     elif route_id == route.RADS:
-        rads_app(src_data)
-
-
-def show_update():
-    """
-    Render page to allow for uploading data files
-    """
-    # Allow user to upload new data files to disk
-    cur_files = data_files.get_on_disk()
-    files, remove_existing = ui.show_update(cur_files)
-
-    # If files were uploaded, write them to disk and update UI
-    if files and len(files) > 0:
-        data_files.update_on_disk(files, remove_existing)
-
-        # Force data module to reread data from disk on next run
-        st.cache_data.clear()
+        rads_page(src_data)
 
 
 def load_data():
@@ -55,22 +39,7 @@ def load_data():
 
     # Read, parse, and cache (via @st.cache_data) source data
     with st.spinner("Initializing..."):
-        return data.extract_from(files)
-
-
-def show_main(src_data):
-    """
-    Render the default page
-    """
-    # Show sidebar and retrieve user specified configuration options
-    util.st_prh_logo()
-    settings = ui.show_settings()
-
-    # Process the source data by partitioning it and precalculating statistics
-    processed_data = data.process(settings, src_data)
-
-    # Show main content
-    ui.show_main_content(settings, processed_data)
+        return source_data.extract_from(files)
 
 
 st.set_page_config(
