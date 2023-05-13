@@ -88,7 +88,7 @@ def _parse(filename: str, contents: bytes) -> RawData:
     # Get list of worksheets if files is an excel spreadsheet
     wb = None
     excel_sheets = []
-    if filename.endswith(".xlsx"):
+    if filename.endswith(".xlsx") and not filename.startswith("~"):
         try:
             wb = xl.load_workbook(io.BytesIO(contents), read_only=True, data_only=True)
             excel_sheets = wb.sheetnames
@@ -104,5 +104,5 @@ def _parse(filename: str, contents: bytes) -> RawData:
         if raw_data is not None:
             return raw_data
 
-    logging.info(f"Skipping ${filename}. No parser available.")
+    logging.info(f"Skipping {filename}. No parser available.")
     return None
