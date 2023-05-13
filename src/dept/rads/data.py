@@ -1,6 +1,6 @@
 import pandas as pd
 from dataclasses import dataclass
-from ...source_data import RawData
+from ...RawData import RawData
 
 @dataclass
 class RadsData:

@@ -1,6 +1,6 @@
 import streamlit as st
 
-from . import data, ui
+from . import data, ui, parser
 
 def therapy_page(src_data):
     """

@@ -1,7 +1,7 @@
-from ... import source_data
-from . import data, ui
+from ... import RawData
+from . import data, ui, parser
 
-def rads_page(src_data: source_data.RawData):
+def rads_page(src_data: RawData.RawData):
     """
     Show department specific Streamlit page
     """
