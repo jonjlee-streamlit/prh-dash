@@ -62,6 +62,7 @@ def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> RawData:
 
     return RawData(
         income_statement=income_statement,
+        income_statements=[],
         revenue=revenue,
         deductions=deductions,
         expenses=expenses,
