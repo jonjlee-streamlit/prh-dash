@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from ...util import df_get_range
+from ...util import df_get_val_or_range
 from ...RawData import RawData
 
 # Column names from Income Statement sheet, columns B:J
@@ -110,7 +110,7 @@ def _parse_income_stmt(df):
     expenses = _rows(df, "Expenses", "Total Operating Expenses")
 
     # Extract standalone values not in a table
-    values = {"income_stmt_month": df_get_range(df, "B3")}  # B3
+    values = {"income_stmt_month": df_get_val_or_range(df, "B3")}  # B3
 
     return income_statement, revenue, deductions, expenses, values
 
@@ -120,18 +120,18 @@ def _parse_volume_stats(df):
     Read the volume and productive/non-productive hours data from the source Excel report
     """
     # Grab the data from volume table on STATS sheet
-    volume = df_get_range(df, "B4:O6")
+    volume = df_get_val_or_range(df, "B4:O6")
     volume.columns = _STATS_COLUMNS
 
     # Grab the data from the hours table on STATS sheet
-    hours = df_get_range(df, "B22:O24")
+    hours = df_get_val_or_range(df, "B22:O24")
     hours.columns = _STATS_COLUMNS
 
     # Extract standalone values not in a table
     values = {
-        "std_fte_hours": df_get_range(df, "C21"),
-        "pct_hours_productive": df_get_range(df, "D21"),
-        "avg_hourly_rate": df_get_range(df, "E21"),
+        "std_fte_hours": df_get_val_or_range(df, "C21"),
+        "pct_hours_productive": df_get_val_or_range(df, "D21"),
+        "avg_hourly_rate": df_get_val_or_range(df, "E21"),
     }
 
     return volume, hours, values
@@ -142,7 +142,7 @@ def _parse_fte_stats(df):
     Read the FTE information from the source Excel report
     """
     # Grab the data in the Paid FTE's table
-    ftes_per_pay_period = df_get_range(df, "K6:L31")
+    ftes_per_pay_period = df_get_val_or_range(df, "K6:L31")
     ftes_per_pay_period.columns = _FTE_COLUMNS
     ftes_per_pay_period.set_index("Pay Period")
     ftes_per_pay_period["Pay Period"] = ftes_per_pay_period["Pay Period"].astype(
@@ -150,7 +150,7 @@ def _parse_fte_stats(df):
     )
 
     # Table with productive/non-productive hours paid
-    fte_hours_paid = df_get_range(df, "B6:D10")
+    fte_hours_paid = df_get_val_or_range(df, "B6:D10")
     fte_hours_paid.columns = ["", "Current Pay Period", "YTD"]
     fte_hours_paid = fte_hours_paid.astype(
         {"Current Pay Period": "float", "YTD": "float"}

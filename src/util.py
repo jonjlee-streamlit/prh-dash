@@ -7,9 +7,11 @@ from openpyxl.utils import cell
 import re
 
 
-def df_get_range(df, cell_range):
+def df_get_val_or_range(df, cell_range):
     """
     Returns a subset of a dataframe using excel-like A1 notation.
+    If given a range, returns a dataframe.
+    If given a single location, returns the value.
     For example, df_get_range(df, "B2") returns the value in column 2, row 2,
     and df_get_range(df, "B2:D5") returns a dataframe with data from columns 2-4, rows 2-5.
     """
