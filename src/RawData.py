@@ -1,5 +1,5 @@
 import pandas as pd
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(eq=True, frozen=True)
@@ -7,20 +7,23 @@ class RawData:
     """Represents raw data read from Excel spreadsheets generated from various sources including Epic and Workday"""
 
     # Data from Workday
-    income_statement: pd.DataFrame
-    income_statements: list[pd.DataFrame]
-    revenue: pd.DataFrame
-    deductions: pd.DataFrame
-    expenses: pd.DataFrame
+    income_statement: pd.DataFrame = None
+    income_statements: list[pd.DataFrame] = field(default_factory=list)
+    revenue: pd.DataFrame = None
+    deductions: pd.DataFrame = None
+    expenses: pd.DataFrame = None
+
+    # Historical volume data from Excel
+    rads_volumes: list[pd.DataFrame] = None
 
     # Volume data from Epic
-    volume: pd.DataFrame
-    hours: pd.DataFrame
-    values: dict
+    volume: pd.DataFrame = None
+    hours: pd.DataFrame = None
+    values: dict = field(default_factory=dict)
 
     # FTE Report
-    fte_per_pay_period: pd.DataFrame
-    fte_hours_paid: pd.DataFrame
+    fte_per_pay_period: pd.DataFrame = None
+    fte_hours_paid: pd.DataFrame = None
 
     @staticmethod
     def merge(segments):
@@ -29,12 +32,15 @@ class RawData:
         income_statement = pd.concat(
             [segment.income_statement for segment in segments], ignore_index=True
         )
-        income_statements = [income_statement for segment in segments for income_statement in segment.income_statements]
-        revenue = pd.concat([segment.revenue for segment in segments], ignore_index=True)
+        revenue = pd.concat(
+            [segment.revenue for segment in segments], ignore_index=True
+        )
         deductions = pd.concat(
             [segment.deductions for segment in segments], ignore_index=True
         )
-        expenses = pd.concat([segment.expenses for segment in segments], ignore_index=True)
+        expenses = pd.concat(
+            [segment.expenses for segment in segments], ignore_index=True
+        )
         volume = pd.concat([segment.volume for segment in segments], ignore_index=True)
         hours = pd.concat([segment.hours for segment in segments], ignore_index=True)
         fte_per_pay_period = pd.concat(
@@ -43,6 +49,13 @@ class RawData:
         fte_hours_paid = pd.concat(
             [segment.fte_hours_paid for segment in segments], ignore_index=True
         )
+        income_statements = []
+        rads_volumes = []
+        for seg in segments:
+            if seg.income_statements is not None:
+                income_statements += seg.income_statements
+            if seg.rads_volumes is not None:
+                rads_volumes += seg.rads_volumes
 
         # Grab scalar values from each segment
         values = {k: v for segment in segments for k, v in segment.values.items()}
@@ -54,6 +67,7 @@ class RawData:
             revenue=revenue,
             deductions=deductions,
             expenses=expenses,
+            rads_volumes=rads_volumes,
             volume=volume,
             hours=hours,
             fte_per_pay_period=fte_per_pay_period,

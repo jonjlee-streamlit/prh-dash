@@ -2,6 +2,7 @@ import pandas as pd
 from dataclasses import dataclass
 from ...RawData import RawData
 
+
 @dataclass
 class RadsData:
     """Represents processed department specific data"""
@@ -21,6 +22,7 @@ def process(raw: RawData) -> RadsData:
     """
     stats = _calc_stats(raw)
     return RadsData(raw=raw, stats=stats)
+
 
 def _calc_stats(raw: RawData) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""

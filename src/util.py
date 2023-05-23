@@ -11,7 +11,7 @@ import re
 # ----------------------------------
 # Pandas functions
 # ----------------------------------
-def df_get_val_or_range(df, cell_range):
+def df_get_val_or_range(df: pd.DataFrame, cell_range: str) -> pd.DataFrame:
     """
     Returns a subset of a dataframe using excel-like A1 notation.
     If given a range, returns a dataframe.
