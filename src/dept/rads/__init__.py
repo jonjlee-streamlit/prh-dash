@@ -9,4 +9,5 @@ def rads_page(src_data: RawData.RawData):
     processed_data = data.process(src_data)
 
     # Show main content
-    ui.show(processed_data)
+    settings = ui.show_settings()
+    ui.show(settings, processed_data)
