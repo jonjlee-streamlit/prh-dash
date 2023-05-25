@@ -46,7 +46,7 @@ def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> RawData:
         ws in excel_sheets for ws in ["Dashboard", "Income Statement", "FTE", "STATS"]
     ):
         return None
-    logging.info(f"Using Therapy parser for {filename}")
+    logging.info(f"{filename} - using Therapy parser")
 
     # Read relevant sheets from the source Excel report
     income_stmt_df = pd.read_excel(contents, sheet_name="Income Statement", header=None)

@@ -38,7 +38,7 @@ def _read_file(filename: str) -> bytes:
     Wrapper for reading a source data file, returning data as byte array.
     In the future, will allow for fetching from URL and handling encrypted data.
     """
-    logging.info("Fetching " + filename)
+    logging.info(filename + " - fetching")
     with open(filename, "rb") as f:
         return f.read()
 
@@ -66,5 +66,5 @@ def _parse(filename: str, contents: bytes) -> RawData:
         if raw_data is not None:
             return raw_data
 
-    logging.info(f"Skipping {filename}. No parser available.")
+    logging.info(f"{filename} - skipping; no parser available.")
     return None

@@ -24,6 +24,32 @@ def test_df_get_tables_by_columns():
     assert tables[1].shape == (3, 2)
     assert tables[2].shape == (3, 1)
 
+def test_df_get_tables_by_rows():
+    # Empty DataFrame
+    empty_df = pd.DataFrame()
+    assert len(list(df_get_tables_by_rows(empty_df, "A:B"))) == 0
+
+    # Test data - use transpose() so we can visualize the data in rows in the code here
+    df = pd.DataFrame(
+        {
+            "row1": [None, None, None, None, None],
+            "row2": [None, "xx", "xx", "xx", None],
+            "row3": [None, None, "xx", None, None],
+            "row4": [None, None, "xx", None, None],
+            "row5": [None, None, None, None, None],
+            "row6": [None, None, None, None, None],
+            "row7": [None, "xx", None, None, None],
+            "row8": [None, None, "xx", None, None],
+            "row9": [None, None, None, None, None],
+            "row0": [None, None, None, "xx", None],
+        }
+    ).transpose()
+
+    # Find all tables of the correct size
+    tables = list(df_get_tables_by_rows(df, "B:D"))
+    assert tables[0].shape == (3, 3)
+    assert tables[1].shape == (2, 3)
+    assert tables[2].shape == (1, 3)
 
 def test_df_next_empty_row():
     # Empty DataFrame
@@ -62,6 +88,33 @@ def test_df_next_empty_row():
     # Starting starting row offset is out of range
     assert df_next_empty_row(df, "A:C", start_row_idx=5) == -1
 
+def test_df_next_row():
+    # Empty DataFrame
+    empty_df = pd.DataFrame()
+    assert df_next_row(empty_df, "A:A") == -1
+
+    # Test data
+    df = pd.DataFrame(
+        {
+            "row1": [1, None, None, None],
+            "row2": [None, None, None, None],
+            "row3": [None, None, None, None],
+            "row4": [2, None, None, None],
+            "row5": [None, None, None, None],
+        }
+    ).transpose()
+
+    # One non-empty row
+    assert df_next_row(df, "A:B") == 0
+
+    # No non-empty rows
+    assert df_next_row(df, "B:C") == -1
+
+    # Test that starting row offset works
+    assert df_next_row(df, "A:B", start_row_idx=1) == 3
+
+    # Starting starting row offset is out of range
+    assert df_next_row(df, "A:B", start_row_idx=5) == -1
 
 def test_df_next_empty_col():
     # Empty DataFrame
@@ -101,10 +154,10 @@ def test_df_next_empty_col():
     assert df_next_empty_col(df, "1:3", start_col_idx=5) == -1
 
 
-def test_df_next_nonempty_col():
+def test_df_next_col():
     # Empty DataFrame
     empty_df = pd.DataFrame()
-    assert df_next_nonempty_col(empty_df, "1:1") == -1
+    assert df_next_col(empty_df, "1:1") == -1
 
     # Test data
     df = pd.DataFrame(
@@ -118,13 +171,13 @@ def test_df_next_nonempty_col():
     ).transpose()
 
     # One non-empty column
-    assert df_next_nonempty_col(df, "1:2") == 0
+    assert df_next_col(df, "1:2") == 0
 
     # No non-empty columns
-    assert df_next_nonempty_col(df, "2:3") == -1
+    assert df_next_col(df, "2:3") == -1
 
     # Test that starting column offset works
-    assert df_next_nonempty_col(df, "1:4", start_col_idx=1) == 3
+    assert df_next_col(df, "1:4", start_col_idx=1) == 3
 
     # Starting starting column offset is out of range
-    assert df_next_nonempty_col(df, "1:3", start_col_idx=5) == -1
+    assert df_next_col(df, "1:3", start_col_idx=5) == -1

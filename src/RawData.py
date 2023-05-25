@@ -14,7 +14,7 @@ class RawData:
     expenses: pd.DataFrame = None
 
     # Historical volume data from Excel
-    rads_volumes: list[pd.DataFrame] = None
+    rads_volumes: list[pd.DataFrame] = field(default_factory=list)
 
     # Volume data from Epic
     volume: pd.DataFrame = None
@@ -24,6 +24,10 @@ class RawData:
     # FTE Report
     fte_per_pay_period: pd.DataFrame = None
     fte_hours_paid: pd.DataFrame = None
+
+    # Produtive / non-productive hour tables
+    hours_by_pay_period: list[pd.DataFrame] = field(default_factory=list)
+    hours_by_month: list[pd.DataFrame] = field(default_factory=list)
 
     @staticmethod
     def merge(segments):
@@ -51,11 +55,13 @@ class RawData:
         )
         income_statements = []
         rads_volumes = []
+        hours_by_pay_period = []
+        hours_by_month = []
         for seg in segments:
-            if seg.income_statements is not None:
-                income_statements += seg.income_statements
-            if seg.rads_volumes is not None:
-                rads_volumes += seg.rads_volumes
+            income_statements += seg.income_statements
+            rads_volumes += seg.rads_volumes
+            hours_by_pay_period += seg.hours_by_pay_period
+            hours_by_month += seg.hours_by_month
 
         # Grab scalar values from each segment
         values = {k: v for segment in segments for k, v in segment.values.items()}
@@ -72,6 +78,8 @@ class RawData:
             hours=hours,
             fte_per_pay_period=fte_per_pay_period,
             fte_hours_paid=fte_hours_paid,
+            hours_by_pay_period=hours_by_pay_period,
+            hours_by_month=hours_by_month,
             values=values,
         )
         return merged_data

@@ -39,11 +39,11 @@ def df_get_tables_by_columns(
     rows is specified in Excel A1-notation, eg. 5:10
     """
     start_col = 0
-    row_indices = _row_ranges_to_list(rows)
+    row_indices = _rows_A1_to_idx_list(rows)
 
     while True:
         # Find the next nonempty column after the current start_col
-        nonempty_col = df_next_nonempty_col(df, rows, start_col_idx=start_col)
+        nonempty_col = df_next_col(df, rows, start_col_idx=start_col)
 
         # Exit if no more data in columns
         if nonempty_col == -1:
@@ -63,62 +63,92 @@ def df_get_tables_by_columns(
         # Start next iteration from the first empty column after the table
         start_col = empty_col
 
+def df_get_tables_by_rows(
+    df: pd.DataFrame, cols: str, start_row_idx: int = 0
+) -> typing.Iterator[pd.DataFrame]:
+    """
+    Yields dataframes representing tables in the original dataframe with data in specified columns.
+    cols is specified in Excel A1-notation, eg. A:F
+    """
+    start_row = start_row_idx
+    col_indices = _cols_A1_to_idx_list(cols)
+
+    while True:
+        # Find the next nonempty row after the current start_row
+        nonempty_row = df_next_row(df, cols, start_row_idx=start_row)
+
+        # Exit if no more data in rows
+        if nonempty_row == -1:
+            break
+
+        # Find the next empty row after the nonempty_col
+        empty_row = df_next_empty_row(df, cols, start_row_idx=nonempty_row)
+
+        # If no more empty rows are found, use the entire remaining rows
+        if empty_row == -1:
+            empty_row = df.shape[0]
+
+        # Extract the table as a dataframe and yield it
+        table = df.iloc[nonempty_row:empty_row, col_indices]
+        yield table
+
+        # Start next iteration from the first empty row after the table
+        start_row = empty_row
+
+def df_next_row(df: pd.DataFrame, columns: str, start_row_idx: int = 0, find_empty: bool = False) -> int:
+    """
+    Given a dataframe, starting row offset, and set of columns, returns the next row index where there is data in one of the columns.
+    columns is specified in Excel A1-notation, eg. A:F,AB,ZZ
+    If find_empty is True, then returns next row where all the columns are empty
+    """
+    # Convert the columns from Excel A1-notation to column indices
+    column_indices = _cols_A1_to_idx_list(columns)
+
+    # Iterate over the rows starting from the specified row
+    for row in range(start_row_idx, df.shape[0]):
+        row_data = df.iloc[row, column_indices]
+        if (not find_empty and not row_data.isnull().all()) or (find_empty and row_data.isnull().all()):
+            # Return index of either first non-empty or empty row, depending on find_empty parameter
+            return row
+
+    # Return -1 if no empty row is found
+    return -1
 
 def df_next_empty_row(df: pd.DataFrame, columns: str, start_row_idx: int = 0) -> int:
     """
     Given a dataframe, starting row offset, and set of columns, returns the next row index where all the columns are empty.
     columns is specified in Excel A1-notation, eg. A:F,AB,ZZ
     """
-    # Convert the columns from Excel A1-notation to column indices
-    column_indices = _col_ranges_to_list(columns)
+    return df_next_row(df, columns, start_row_idx, True)
 
-    # Iterate over the rows starting from the specified row
-    for row in range(start_row_idx, df.shape[0]):
-        row_data = df.iloc[row, column_indices]
-        if row_data.isnull().all():
-            return row
 
-    # Return -1 if no empty row is found
+def df_next_col(df: pd.DataFrame, rows: str, start_col_idx: int = 0, find_empty: bool = False) -> int:
+    """
+    Given a dataframe, starting column offset, and set of rows, returns the next column index where there is data in one of the rows.
+    rows is specified in Excel A1-notation or row numbers (first row is 1), eg. 1:5,10,15
+    If find_empty is True, then returns next column where all the rows are empty
+    """
+    # Convert the rows from Excel A1-notation to row indices
+    row_indices = _rows_A1_to_idx_list(rows)
+
+    # Iterate over the columns starting from the specified column
+    for col in range(start_col_idx, df.shape[1]):
+        col_data = df.iloc[row_indices, col]
+        if (not find_empty and not col_data.isnull().all()) or (find_empty and col_data.isnull().all()):
+            return col
+
+    # Return -1 if no non-empty column is found
     return -1
-
 
 def df_next_empty_col(df: pd.DataFrame, rows: str, start_col_idx: int = 0) -> int:
     """
     Given a dataframe, starting column offset, and set of rows, returns the next column index where all the rows are empty.
     rows is specified in Excel A1-notation or row numbers (first row is 1), eg. 1:5,10,15
     """
-    # Convert the rows from Excel A1-notation to row indices
-    row_indices = _row_ranges_to_list(rows)
-
-    # Iterate over the columns starting from the specified column
-    for col in range(start_col_idx, df.shape[1]):
-        col_data = df.iloc[row_indices, col]
-        if col_data.isnull().all():
-            return col
-
-    # Return -1 if no empty column is found
-    return -1
+    return df_next_col(df, rows, start_col_idx, True)
 
 
-def df_next_nonempty_col(df: pd.DataFrame, rows: str, start_col_idx: int = 0) -> int:
-    """
-    Given a dataframe, starting column offset, and set of rows, returns the next column index where all the rows are empty.
-    rows is specified in Excel A1-notation or row numbers (first row is 1), eg. 1:5,10,15
-    """
-    # Convert the rows from Excel A1-notation to row indices
-    row_indices = _row_ranges_to_list(rows)
-
-    # Iterate over the columns starting from the specified column
-    for col in range(start_col_idx, df.shape[1]):
-        col_data = df.iloc[row_indices, col]
-        if not col_data.isnull().all():
-            return col
-
-    # Return -1 if no non-empty column is found
-    return -1
-
-
-def _col_ranges_to_list(columns: str) -> list[int]:
+def _cols_A1_to_idx_list(columns: str) -> list[int]:
     """
     Given a set of columns in Excel A1-notation or single row numbers, eg A:F,AB,ZZ
     return a list of 0-based row indexes in the range.
@@ -138,7 +168,7 @@ def _col_ranges_to_list(columns: str) -> list[int]:
     return column_indices
 
 
-def _row_ranges_to_list(rows: str) -> list[int]:
+def _rows_A1_to_idx_list(rows: str) -> list[int]:
     """
     Given a set of rows in Excel A1-notation or single row numbers, eg 1:5,10,15 (note, A1 row numbers are 1-based)
     return a list of 0-based row indexes in the range.
