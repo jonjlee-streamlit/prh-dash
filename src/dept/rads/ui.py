@@ -35,7 +35,7 @@ def show(settings: dict, data: RadsData):
 
 
 def _show_income_stmt(settings, data):
-    st.header("Income Statement")
+    st.subheader("Revenue")
 
 def _show_hours(settings, data):
     pass
