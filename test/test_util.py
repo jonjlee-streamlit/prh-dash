@@ -5,7 +5,7 @@ from src.util import *
 def test_df_get_tables_by_columns():
     # Empty DataFrame
     empty_df = pd.DataFrame()
-    assert len(list(df_get_tables_by_columns(empty_df, "1:2"))) == 0
+    assert len(df_get_tables_by_columns(empty_df, "1:2")) == 0
 
     # Test data - use transpose() so we can visualize the data in rows in the code here
     df = pd.DataFrame(
@@ -19,15 +19,16 @@ def test_df_get_tables_by_columns():
     ).transpose()
 
     # Find all tables of the correct size
-    tables = list(df_get_tables_by_columns(df, "2:4"))
+    tables = df_get_tables_by_columns(df, "2:4")
     assert tables[0].shape == (3, 3)
     assert tables[1].shape == (3, 2)
     assert tables[2].shape == (3, 1)
 
+
 def test_df_get_tables_by_rows():
     # Empty DataFrame
     empty_df = pd.DataFrame()
-    assert len(list(df_get_tables_by_rows(empty_df, "A:B"))) == 0
+    assert len(df_get_tables_by_rows(empty_df, "A:B")) == 0
 
     # Test data - use transpose() so we can visualize the data in rows in the code here
     df = pd.DataFrame(
@@ -46,10 +47,11 @@ def test_df_get_tables_by_rows():
     ).transpose()
 
     # Find all tables of the correct size
-    tables = list(df_get_tables_by_rows(df, "B:D"))
+    tables = df_get_tables_by_rows(df, "B:D")
     assert tables[0].shape == (3, 3)
     assert tables[1].shape == (2, 3)
     assert tables[2].shape == (1, 3)
+
 
 def test_df_next_empty_row():
     # Empty DataFrame
@@ -88,6 +90,7 @@ def test_df_next_empty_row():
     # Starting starting row offset is out of range
     assert df_next_empty_row(df, "A:C", start_row_idx=5) == -1
 
+
 def test_df_next_row():
     # Empty DataFrame
     empty_df = pd.DataFrame()
@@ -115,6 +118,7 @@ def test_df_next_row():
 
     # Starting starting row offset is out of range
     assert df_next_row(df, "A:B", start_row_idx=5) == -1
+
 
 def test_df_next_empty_col():
     # Empty DataFrame

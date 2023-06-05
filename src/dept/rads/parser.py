@@ -3,7 +3,15 @@ import pandas as pd
 from ...util import df_get_tables_by_columns, df_get_tables_by_rows
 from ...RawData import RawData
 
-KNOWN_RADS_DEPT_NUMBERS = ["CC_71200", "CC_71300", "CC_71400", "CC_71430", "CC_71450", "CC_71600"]
+KNOWN_RADS_DEPT_NUMBERS = [
+    "CC_71200",
+    "CC_71300",
+    "CC_71400",
+    "CC_71430",
+    "CC_71450",
+    "CC_71600",
+]
+
 
 def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> RawData:
     # Detect if incoming file is for this department
@@ -24,14 +32,16 @@ def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> RawData:
         return RawData(income_statements=[df])
     elif volumes_file:
         # Historical volumes
-        volumes = list(df_get_tables_by_columns(df, "6:14"))
+        volumes = df_get_tables_by_columns(df, "6:14")
         return RawData(rads_volumes=volumes)
     elif hours_file:
         # Productive and non-productive hours
         sheet2 = pd.read_excel(contents, sheet_name=1, header=None)
-        hours_by_pay_period = list(df_get_tables_by_rows(df, "A:S", start_row_idx=4))
-        hours_by_month = list(df_get_tables_by_rows(sheet2, "A:R", start_row_idx=3))
-        return RawData(hours_by_pay_period=hours_by_pay_period, hours_by_month=hours_by_month)
+        hours_by_pay_period = df_get_tables_by_rows(df, "A:S", start_row_idx=4)
+        hours_by_month = df_get_tables_by_rows(sheet2, "A:R", start_row_idx=3)
+        return RawData(
+            hours_by_pay_period=hours_by_pay_period, hours_by_month=hours_by_month
+        )
 
     return None
 
@@ -56,6 +66,7 @@ def _is_volumes_file(df, excel_sheets):
     if not (len(excel_sheets) == 1 and "dBase" in excel_sheets[0]):
         return False
     return df.iloc[3, 3] == "STAT REPORT CARD"
+
 
 def _is_hours_file(df, excel_sheets):
     """

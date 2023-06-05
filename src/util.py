@@ -31,13 +31,12 @@ def df_get_val_or_range(df: pd.DataFrame, cell_range: str) -> pd.DataFrame:
         return df.iloc[row - 1, col - 1]
 
 
-def df_get_tables_by_columns(
-    df: pd.DataFrame, rows: str
-) -> typing.Iterator[pd.DataFrame]:
+def df_get_tables_by_columns(df: pd.DataFrame, rows: str) -> list[pd.DataFrame]:
     """
-    Yields dataframes representing tables in the original dataframe based on specified rows.
+    REturns a list of dataframes representing tables in the original dataframe based on specified rows.
     rows is specified in Excel A1-notation, eg. 5:10
     """
+    ret = []
     start_col = 0
     row_indices = _rows_A1_to_idx_list(rows)
 
@@ -58,18 +57,22 @@ def df_get_tables_by_columns(
 
         # Extract the table as a dataframe and yield it
         table = df.iloc[row_indices, nonempty_col:empty_col]
-        yield table
+        ret.append(table)
 
         # Start next iteration from the first empty column after the table
         start_col = empty_col
 
+    return ret
+
+
 def df_get_tables_by_rows(
     df: pd.DataFrame, cols: str, start_row_idx: int = 0
-) -> typing.Iterator[pd.DataFrame]:
+) -> list[pd.DataFrame]:
     """
     Yields dataframes representing tables in the original dataframe with data in specified columns.
     cols is specified in Excel A1-notation, eg. A:F
     """
+    ret = []
     start_row = start_row_idx
     col_indices = _cols_A1_to_idx_list(cols)
 
@@ -90,12 +93,17 @@ def df_get_tables_by_rows(
 
         # Extract the table as a dataframe and yield it
         table = df.iloc[nonempty_row:empty_row, col_indices]
-        yield table
+        ret.append(table)
 
         # Start next iteration from the first empty row after the table
         start_row = empty_row
 
-def df_next_row(df: pd.DataFrame, columns: str, start_row_idx: int = 0, find_empty: bool = False) -> int:
+    return ret
+
+
+def df_next_row(
+    df: pd.DataFrame, columns: str, start_row_idx: int = 0, find_empty: bool = False
+) -> int:
     """
     Given a dataframe, starting row offset, and set of columns, returns the next row index where there is data in one of the columns.
     columns is specified in Excel A1-notation, eg. A:F,AB,ZZ
@@ -107,12 +115,15 @@ def df_next_row(df: pd.DataFrame, columns: str, start_row_idx: int = 0, find_emp
     # Iterate over the rows starting from the specified row
     for row in range(start_row_idx, df.shape[0]):
         row_data = df.iloc[row, column_indices]
-        if (not find_empty and not row_data.isnull().all()) or (find_empty and row_data.isnull().all()):
+        if (not find_empty and not row_data.isnull().all()) or (
+            find_empty and row_data.isnull().all()
+        ):
             # Return index of either first non-empty or empty row, depending on find_empty parameter
             return row
 
     # Return -1 if no empty row is found
     return -1
+
 
 def df_next_empty_row(df: pd.DataFrame, columns: str, start_row_idx: int = 0) -> int:
     """
@@ -122,7 +133,9 @@ def df_next_empty_row(df: pd.DataFrame, columns: str, start_row_idx: int = 0) ->
     return df_next_row(df, columns, start_row_idx, True)
 
 
-def df_next_col(df: pd.DataFrame, rows: str, start_col_idx: int = 0, find_empty: bool = False) -> int:
+def df_next_col(
+    df: pd.DataFrame, rows: str, start_col_idx: int = 0, find_empty: bool = False
+) -> int:
     """
     Given a dataframe, starting column offset, and set of rows, returns the next column index where there is data in one of the rows.
     rows is specified in Excel A1-notation or row numbers (first row is 1), eg. 1:5,10,15
@@ -134,11 +147,14 @@ def df_next_col(df: pd.DataFrame, rows: str, start_col_idx: int = 0, find_empty:
     # Iterate over the columns starting from the specified column
     for col in range(start_col_idx, df.shape[1]):
         col_data = df.iloc[row_indices, col]
-        if (not find_empty and not col_data.isnull().all()) or (find_empty and col_data.isnull().all()):
+        if (not find_empty and not col_data.isnull().all()) or (
+            find_empty and col_data.isnull().all()
+        ):
             return col
 
     # Return -1 if no non-empty column is found
     return -1
+
 
 def df_next_empty_col(df: pd.DataFrame, rows: str, start_col_idx: int = 0) -> int:
     """
