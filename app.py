@@ -2,6 +2,7 @@ import streamlit as st
 from src import auth, route, data_files, source_data, update
 from src.dept import rads_page, therapy_page
 
+
 def run():
     """Main streamlit app entry point"""
     # Authenticate user
@@ -22,7 +23,7 @@ def run():
         return st.write("No data available. Please contact administrator.")
 
     # Render page based on the route
-    if route_id == route.MAIN:     
+    if route_id == route.MAIN:
         therapy_page(src_data)
     elif route_id == route.RADS:
         rads_page(src_data)
