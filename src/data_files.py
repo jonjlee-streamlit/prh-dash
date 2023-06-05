@@ -17,7 +17,13 @@ def get_on_disk():
     if not os.path.isdir(BASE_PATH):
         return []
 
-    return [os.path.join(BASE_PATH, local) for local in os.listdir(BASE_PATH)]
+    # Return full path for all files in BASE_PATH
+    # Filter out temporary files: anything that starts with ~
+    return [
+        os.path.join(BASE_PATH, local)
+        for local in os.listdir(BASE_PATH)
+        if not local.startswith("~")
+    ]
 
 
 def update_on_disk(files: list, remove_existing_first: bool):

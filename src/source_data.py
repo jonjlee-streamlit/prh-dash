@@ -5,13 +5,14 @@ import io
 import logging
 import pandas as pd
 import openpyxl as xl
+import streamlit as st
 from .RawData import RawData
 from . import dept
 
 _PARSERS = [dept.therapy.parser, dept.rads.parser]
 
 
-#@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False)
 def extract_from(files: list[str]) -> RawData:
     """
     Read and parse a list of source data files, including for example, Excel reports exported from Workday
@@ -50,7 +51,7 @@ def _parse(filename: str, contents: bytes) -> RawData:
     # Get list of worksheets if files is an excel spreadsheet
     wb = None
     excel_sheets = []
-    if filename.endswith(".xlsx") and not filename.startswith("~"):
+    if filename.endswith(".xlsx"):
         try:
             wb = xl.load_workbook(io.BytesIO(contents), read_only=True, data_only=True)
             excel_sheets = wb.sheetnames
