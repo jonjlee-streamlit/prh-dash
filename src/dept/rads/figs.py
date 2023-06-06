@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 import plotly.express as px
 from ... import util
@@ -123,5 +124,87 @@ def volumes_fig(df):
                 "%{y} exams",
             ]
         )
+    )
+    # Remove excessive top margin
+    fig.update_layout(
+        margin={"t": 0},
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def hours_table(hours_for_month, hours_ytd):
+    # Combine hours for month and YTD hours into single table
+    # Transpose to so the numbers appear in columns
+    df = pd.concat([hours_for_month, hours_ytd]).T.reset_index()
+    # Use the original row labels ("Jan 2023", "YTD") as column headers, and drop the row
+    df.columns = df.iloc[0, :]
+    df = df.iloc[1:, :]
+    styled_df = (
+        df.style.hide(axis=0)
+        .format("{:.1f}", subset=df.columns[1:].tolist())
+        .set_table_styles(
+            [
+                {"selector": "", "props": [("margin-left", "100px")]},
+                {"selector": "tr", "props": [("border-top", "0px")]},
+                {"selector": "th, td", "props": [("border", "0px")]},
+                {"selector": "td", "props": [("padding", "3px 13px")]},
+                {
+                    "selector": "td:nth-child(2), td:nth-child(3)",
+                    "props": [("border-bottom", "1px solid black")],
+                },
+                {
+                    "selector": "tr:last-child td:nth-child(2), tr:last-child td:nth-child(3)",
+                    "props": [("border-bottom", "2px solid black")],
+                },
+                {
+                    "selector": "tr:last-child, tr:nth-last-child(2)",
+                    "props": [("font-weight", "bold")],
+                },
+            ]
+        )
+    )
+    st.markdown(styled_df.to_html(), unsafe_allow_html=True)
+
+
+def fte_fig(src):
+    df = src[["month", "fte"]]
+    df.columns = ["Month", "FTE"]
+    fig = px.bar(
+        df, x=df.columns[0], y=df.columns[1], text=df.columns[1], text_auto=".1f"
+    )
+    # Horizontal budget line
+    fte_budget = 8.0
+    fig.add_hline(
+        y=fte_budget + 0.05,
+        line=dict(color="red", width=3),
+        layer="below",
+    )
+    # Text for budget line. Place over last visible month and shift to the right by 80 pixels.
+    fig.add_annotation(
+        x=df["Month"].iloc[-1],
+        y=8,
+        xref="x",
+        yref="y",
+        text=f"Budget: {fte_budget}",
+        showarrow=False,
+        font=dict(size=14, color="red"),
+        align="left",
+        xshift=80,
+        yshift=15,
+    )
+    # Show months on x axis like "Jan 2023"
+    fig.update_xaxes(tickformat="%b %Y")
+    # On hover text, show month "Jan 2023" and round y value to 1 decimal
+    fig.update_traces(
+        hovertemplate="<br>".join(
+            [
+                "%{x|%b %Y}",
+                "%{y:.1f} FTE",
+            ]
+        )
+    )
+    # Remove excessive top margin
+    fig.update_layout(
+        margin={"t": 0},
     )
     st.plotly_chart(fig, use_container_width=True)

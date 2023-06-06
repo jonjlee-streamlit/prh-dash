@@ -1,4 +1,5 @@
 import typing
+import calendar
 import pandas as pd
 import streamlit as st
 from dataclasses import dataclass
@@ -40,7 +41,11 @@ DEPT_ID_MAP = {
     "Nuclear Medicine": DEPT_NUCLEAR,
     "PRH NUCLEAR MEDICINE": DEPT_NUCLEAR,
     "CC_71600": DEPT_NUCLEAR,
+    "TOTAL": "TOTAL",
 }
+
+# Ratio to convert hours into FTE equivalent
+FTE_HOURS_PER_DAY = 2080 / 365
 
 
 @dataclass(frozen=True)
@@ -62,8 +67,10 @@ class RadsData:
 
     # Volumes calculated from billing
 
-    # Productive / Non-productive hours for this month
+    # Productive / Non-productive hours. Separate member for hours for this month and YTD
     hours: pd.DataFrame
+    hours_for_month: pd.DataFrame
+    hours_ytd: pd.DataFrame
 
     # Calculated statistics
     stats: dict
@@ -79,6 +86,8 @@ def process(settings: dict, raw: RawData) -> RadsData:
     income_stmt = None
     volumes = None
     hours = None
+    hours_for_month = None
+    hours_ytd = None
 
     if len(raw.income_statements) > 0:
         # Combine and normalize all income statment data into one table
@@ -93,18 +102,19 @@ def process(settings: dict, raw: RawData) -> RadsData:
 
     if len(raw.rads_volumes) > 0:
         # Combine all historic volume data into one table
-        dts = _month_str_to_dates(month)
         volumes = _normalize_volumes(raw.rads_volumes)
 
         # Filter out our department data and sort by time
-        volumes = _filter_by_dept(volumes, settings["dept"])
+        volumes = _filter_volumes_by_dept(volumes, dept)
         volumes = volumes.sort_values(by=volumes.columns[0], ascending=False)
 
     if len(raw.hours_by_month) > 0:
-        hours = [
-            df for df in raw.hours_by_month if df.iloc[0, 0] == pd.to_datetime(month)
-        ]
-        hours = hours[0] if len(hours) > 0 else None
+        # Combine and normalize all hours data into one table
+        hours = _normalize_hours(raw.hours_by_month)
+        # Filter data for our department and selected month
+        hours = hours[hours["dept"] == dept]
+        hours_for_month = _calc_hours_for_month(hours, month)
+        hours_ytd = _calc_hours_ytd(hours)
 
     # Pre-calculate statistics to display
     stats = _calc_stats(settings, raw, volumes)
@@ -116,6 +126,8 @@ def process(settings: dict, raw: RawData) -> RadsData:
         income_stmt=income_stmt,
         volumes=volumes,
         hours=hours,
+        hours_for_month=hours_for_month,
+        hours_ytd=hours_ytd,
         stats=stats,
     )
 
@@ -188,7 +200,7 @@ def _normalize_volumes(volumes: list[pd.DataFrame]):
     df = df[df.iloc[:, 0] != "YTD"]
 
     # First row is column headers. Map the values to our specific dept IDs.
-    columns = list(df.iloc[0].map({**DEPT_ID_MAP, "TOTAL": "TOTAL"}).fillna(""))
+    columns = list(df.iloc[0].map(DEPT_ID_MAP).fillna(""))
     columns[0] = "Month"
     df.columns = columns
     df = df.iloc[1:]
@@ -210,13 +222,127 @@ def _month_str_to_dates(month_str: str) -> typing.Tuple[datetime, datetime]:
     return (first_day, last_day)
 
 
-def _filter_by_dept(df: pd.DataFrame, dept: str) -> pd.DataFrame:
+def _filter_volumes_by_dept(df: pd.DataFrame, dept: str) -> pd.DataFrame:
     # Retain month column and column with the ID of the desired deptartment.
     # The department names in the source data are changed to the canonical
     # department ID in _normalize_volumes().
     df = df.loc[:, ["Month", dept]]
     df.columns = ["Month", "Volume"]
     return df
+
+
+def _normalize_hours(hours: list[pd.DataFrame]):
+    """
+    Combine separate hours tables into a single dataframe.
+    Transform departments to canonical IDs, sum various categories of overtime and leave into single columns
+    """
+    ret = []
+    for hours_df in hours:
+        df = pd.DataFrame(
+            columns=[
+                "dept",
+                "month",
+                "regular",
+                "overtime",
+                "pct_overtime",
+                "productive",
+                "nonproductive",
+                "pct_nonproductive",
+                "total",
+                "fte",
+            ]
+        )
+        # Get the month from top left cell
+        month = hours_df.iloc[0, 0]
+        # Drop first and last two rows - headers and totals
+        hours_df = hours_df[2:-2]
+        # Ignore column 1, dept number. Remap column 2, dept name to canonical dept ID
+        df["dept"] = hours_df.iloc[:, 1].map(DEPT_ID_MAP)
+        # Add month to every row
+        df["month"] = month
+        # Copy column 3
+        df["regular"] = hours_df.iloc[:, 2]
+        # Sum columns 4-6 as overtime
+        df["overtime"] = hours_df.iloc[:, 3:6].sum(axis=1)
+        # Sum columns regular + overtime + education (columns 3-7) as productive hours
+        df["productive"] = hours_df.iloc[:, 2:7].sum(axis=1)
+        # Sum columns 9-16 as non-productive hours
+        df["nonproductive"] = hours_df.iloc[:, 8:16].sum(axis=1)
+        # Calculate % overtime, % non-productive, total hours, and FTE equivalient
+        df["pct_overtime"] = df["overtime"] / (df["overtime"] + df["regular"])
+        df["total"] = df["productive"] + df["nonproductive"]
+        df["pct_nonproductive"] = df["nonproductive"] / (df["total"])
+        df["fte"] = df["total"] / (
+            FTE_HOURS_PER_DAY * calendar.monthrange(month.year, month.month)[1]
+        )
+        ret.append(df)
+
+    return pd.concat(ret)
+
+
+def _calc_hours_for_month(hours: pd.DataFrame, month) -> pd.DataFrame:
+    data = [month, 0, 0, 0, 0, 0, 0]
+    hours = hours[hours["month"] == month].reset_index(drop=True)
+    if hours.shape[0] > 0:
+        data = [
+            month,
+            hours.loc[0, "regular"],
+            hours.loc[0, "overtime"],
+            hours.loc[0, "productive"],
+            hours.loc[0, "nonproductive"],
+            hours.loc[0, "total"],
+            hours.loc[0, "fte"],
+        ]
+
+    ret = pd.DataFrame(
+        [data] if data else None,
+        columns=[
+            "",
+            "Regular Hours",
+            "OT Hours",
+            "Productive Hours",
+            "Non-productive Hours",
+            "Total Paid Hours",
+            "FTE",
+        ],
+    )
+
+    return ret
+
+
+def _calc_hours_ytd(hours: pd.DataFrame) -> pd.DataFrame:
+    today = date.today()
+    first_day = date(today.year, 1, 1)
+    hours = hours[
+        (hours["month"] >= pd.to_datetime(first_day))
+        & (hours["month"] <= pd.to_datetime(today))
+    ]
+    data = None
+    if hours.shape[0] > 0:
+        data = [
+            "YTD",
+            hours["regular"].sum(),
+            hours["overtime"].sum(),
+            hours["productive"].sum(),
+            hours["nonproductive"].sum(),
+            hours["total"].sum(),
+            hours["fte"].sum(),
+        ]
+
+    ret = pd.DataFrame(
+        [data] if data else None,
+        columns=[
+            "",
+            "Regular Hours",
+            "OT Hours",
+            "Productive Hours",
+            "Non-productive Hours",
+            "Total Paid Hours",
+            "FTE",
+        ],
+    )
+
+    return ret
 
 
 def _calc_stats(settings: dict, raw: RawData, volumes: pd.DataFrame) -> dict:
