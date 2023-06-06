@@ -56,7 +56,7 @@ DEFAULT_INCOME_STATEMENT_DEF = [
             {"account": "49002:Administrative Write Offs"},
         ],
     },
-    {"name": "Net Revenue", "total": ["Operating Revenues", "Deductions"]},
+    {"name": "Net Revenue", "total": ["Operating Revenues", "-Deductions"]},
     {
         "name": "Expenses",
         "items": [
@@ -157,7 +157,7 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
     )
 
     # Blank Income Statement dataframe
-    ret = pd.DataFrame(columns=["hier", "Ledger Account", "Month", "Actual", "Budget"])
+    ret = pd.DataFrame(columns=["hier", "Ledger Account", "Actual", "Budget"])
 
     def process_item(item, path):
         """
@@ -176,7 +176,6 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 item["name"],
                 None,
                 None,
-                None,
             ]
             for sub_item in item["items"]:
                 process_item(sub_item, cur_path)
@@ -192,7 +191,7 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 cur_path = f"{account}" if path == "" else f"{path}|{account}"
 
                 # Add a header row
-                ret.loc[len(ret)] = [cur_path, account, None, None, None]
+                ret.loc[len(ret)] = [cur_path, account, None, None]
 
                 # Get list of categories, and recursively add data
                 unique_categories = set(
@@ -210,7 +209,7 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 mask = src_df["Ledger Account"] == account
                 if category:
                     mask &= src_df["Category"] == category
-                rows = src_df.loc[mask, ["Ledger Account", "Month", "Actual", "Budget"]]
+                rows = src_df.loc[mask, ["Ledger Account", "Actual", "Budget"]]
 
                 # If "negative" is defined, make value negative
                 multiplier = -1 if neg else 1
@@ -220,7 +219,6 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                     ret.loc[len(ret)] = [
                         cur_path,
                         category if category else row["Ledger Account"],
-                        row["Month"],
                         multiplier * row["Actual"],
                         multiplier * row["Budget"],
                     ]
@@ -243,7 +241,7 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 # Add or substract to final total
                 actual += (-1 if neg else 1) * actual_sum
                 budget += (-1 if neg else 1) * budget_sum
-            ret.loc[len(ret)] = [cur_path, item["name"], None, actual, budget]
+            ret.loc[len(ret)] = [cur_path, item["name"], actual, budget]
 
     # Return a dataframe using the given income statement definition
     for item in statement_def:

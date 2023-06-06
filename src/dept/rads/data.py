@@ -61,6 +61,7 @@ class RadsData:
 
     # Income statement for a specific department and time period
     income_stmt: pd.DataFrame
+    income_stmt_ytd: pd.DataFrame
 
     # Historical volumes from stats report card
     volumes: pd.DataFrame
@@ -84,6 +85,7 @@ def process(settings: dict, raw: RawData) -> RadsData:
     """
     dept, month = settings["dept"], settings["month"]
     income_stmt = None
+    income_stmt_ytd = None
     volumes = None
     hours = None
     hours_for_month = None
@@ -91,14 +93,16 @@ def process(settings: dict, raw: RawData) -> RadsData:
 
     if len(raw.income_statements) > 0:
         # Combine and normalize all income statment data into one table
-        stmt = _normalize_income_stmts(raw.income_statements)
+        income_stmts = _normalize_income_stmts(raw.income_statements)
 
         # Partition based on department
-        df_by_dept = _partition_income_stmt(stmt)
+        stmt_by_dept = _partition_income_stmt(income_stmts)
 
         # Organize data items into an income statment
-        if dept in df_by_dept:
-            income_stmt = generate_income_stmt(df_by_dept[dept])
+        if dept in stmt_by_dept:
+            stmt = stmt_by_dept[dept]
+            income_stmt = _calc_income_stmt_for_month(stmt, month)
+            income_stmt_ytd = _calc_income_stmt_ytd(stmt)
 
     if len(raw.rads_volumes) > 0:
         # Combine all historic volume data into one table
@@ -117,13 +121,14 @@ def process(settings: dict, raw: RawData) -> RadsData:
         hours_ytd = _calc_hours_ytd(hours)
 
     # Pre-calculate statistics to display
-    stats = _calc_stats(settings, raw, volumes)
+    stats = _calc_stats(settings, raw, income_stmt_ytd, volumes)
 
     return RadsData(
         dept=dept,
         month=month,
         raw=raw,
         income_stmt=income_stmt,
+        income_stmt_ytd=income_stmt_ytd,
         volumes=volumes,
         hours=hours,
         hours_for_month=hours_for_month,
@@ -146,7 +151,6 @@ def _normalize_income_stmts(stmts: list[pd.DataFrame]):
 
         # Extract the month and year from cell E1, which should read "Month to Date: MM/YYYY"
         month_year = df.iloc[0, 4].split(":")[1].strip()
-        month, year = month_year.split("/")
 
         # Use row 2 as the column names and drop the first two rows
         df.columns = df.iloc[1]
@@ -155,13 +159,15 @@ def _normalize_income_stmts(stmts: list[pd.DataFrame]):
         # Normalize column names
         df.columns.values[4] = "Actual"
         df.columns.values[5] = "Budget"
+        df.columns.values[11] = "Actual YTD"
+        df.columns.values[12] = "Budget YTD"
 
         # Normalize values using our defined maps. fillna() is used to retain any unknown values not
         # specified in the dict.
         df["Cost Center"] = df["Cost Center"].map(DEPT_ID_MAP).fillna(df["Cost Center"])
 
         # Insert a new column for the month
-        df.insert(0, "Month", f"{year}-{month}")
+        df.insert(0, "Month", pd.to_datetime(month_year))
         ret.append(df)
 
     return pd.concat(ret) if len(ret) > 0 else None
@@ -184,6 +190,25 @@ def _partition_income_stmt(stmt: pd.DataFrame):
         else:
             ret[dept] = dept_data
 
+    return ret
+
+
+def _calc_income_stmt_for_month(stmt: pd.DataFrame, month: str) -> pd.DataFrame:
+    # Filter data for given month
+    stmt = stmt[stmt["Month"] == month]
+    ret = generate_income_stmt(stmt)
+    return ret
+
+
+def _calc_income_stmt_ytd(stmt: pd.DataFrame) -> pd.DataFrame:
+    # Filter data for most recent month present
+    month = stmt["Month"].max()
+    stmt = stmt[stmt["Month"] == month]
+
+    # Copy data from YTD data (columns L:M) to Actual and Budget columns (E:F)
+    stmt = stmt.copy()
+    stmt[["Actual", "Budget"]] = stmt[["Actual YTD", "Budget YTD"]]
+    ret = generate_income_stmt(stmt)
     return ret
 
 
@@ -345,12 +370,15 @@ def _calc_hours_ytd(hours: pd.DataFrame) -> pd.DataFrame:
     return ret
 
 
-def _calc_stats(settings: dict, raw: RawData, volumes: pd.DataFrame) -> dict:
+def _calc_stats(
+    settings: dict, raw: RawData, income_stmt_ytd: pd.DataFrame, volumes: pd.DataFrame
+) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
     # Get the volume for the selected month by the user, which will be in the format "Jan 2023"
     month = settings["month"]
     df = volumes.loc[volumes["Month"] == pd.to_datetime(month)]
     volume = df.iloc[0, 1] if df.shape[0] > 0 else 0
+
     s = {
         # Volume for this month
         "volume": volume

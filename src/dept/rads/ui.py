@@ -77,10 +77,20 @@ def show(settings: dict, data: data.RadsData):
 
 
 def _show_income_stmt(settings: dict, data: data.RadsData):
-    if data.income_stmt is not None:
-        figs.aggrid_income_stmt(data.income_stmt)
-    else:
-        st.write(f"No income statment data for this month")
+    col_month, col_ytd = st.columns(2)
+    with col_month:
+        st.subheader("Month to Date")
+        if data.income_stmt is not None:
+            figs.aggrid_income_stmt(data.income_stmt)
+        else:
+            st.write(f"No data for this month")
+
+    with col_ytd:
+        st.subheader("YTD")
+        if data.income_stmt_ytd is not None:
+            figs.aggrid_income_stmt(data.income_stmt_ytd)
+        else:
+            st.write(f"No data for this department")
 
 
 def _show_volumes(settings: dict, data: data.RadsData):
@@ -105,7 +115,7 @@ def _show_volumes(settings: dict, data: data.RadsData):
 
 def _show_hours(settings, data):
     if data.hours is None or data.hours.shape[0] == 0:
-        return st.write("No payroll hours data for this month")
+        return st.write("No data for this month")
 
     # Show productive / non-productive hours for month
     st.subheader("Hours")

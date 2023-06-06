@@ -44,6 +44,6 @@ def load_data():
 
 
 st.set_page_config(
-    page_title="PRH Dashboard", layout="centered", initial_sidebar_state="auto"
+    page_title="PRH Dashboard", layout="wide", initial_sidebar_state="auto"
 )
 run()

@@ -139,12 +139,15 @@ def hours_table(hours_for_month, hours_ytd):
     # Use the original row labels ("Jan 2023", "YTD") as column headers, and drop the row
     df.columns = df.iloc[0, :]
     df = df.iloc[1:, :]
+
+    # Create borders and row bolding
+    left_margin = 25
     styled_df = (
         df.style.hide(axis=0)
         .format("{:.1f}", subset=df.columns[1:].tolist())
         .set_table_styles(
             [
-                {"selector": "", "props": [("margin-left", "100px")]},
+                {"selector": "", "props": [("margin-left", str(left_margin) + "px")]},
                 {"selector": "tr", "props": [("border-top", "0px")]},
                 {"selector": "th, td", "props": [("border", "0px")]},
                 {"selector": "td", "props": [("padding", "3px 13px")]},
@@ -189,7 +192,7 @@ def fte_fig(src):
         showarrow=False,
         font=dict(size=14, color="red"),
         align="left",
-        xshift=80,
+        xshift=150,
         yshift=15,
     )
     # Show months on x axis like "Jan 2023"
