@@ -1,4 +1,6 @@
 import streamlit as st
+import plotly.express as px
+from ... import util
 from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, JsCode
 
 
@@ -105,3 +107,21 @@ def aggrid_income_stmt(df):
         """,
         unsafe_allow_html=True,
     )
+
+
+def volumes_fig(df):
+    fig = px.bar(
+        df,
+        x=df.columns[0],
+        y=df.columns[1],
+        text=df.columns[1],
+    )
+    fig.update_traces(
+        hovertemplate="<br>".join(
+            [
+                "%{x|%b %Y}",
+                "%{y} exams",
+            ]
+        )
+    )
+    st.plotly_chart(fig, use_container_width=True)

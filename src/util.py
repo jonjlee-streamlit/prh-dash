@@ -1,9 +1,11 @@
 """
 Utility functions
 """
+import typing
 import streamlit as st
 import pandas as pd
-import typing
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from openpyxl.utils import cell
 import re
 
@@ -231,3 +233,44 @@ def st_sidebar_prh_logo():
         """,
         unsafe_allow_html=True,
     )
+
+
+# -----------------------------------
+# Date/time functions
+# -----------------------------------
+def period_str_to_dates(dates: str) -> typing.Tuple[datetime, datetime]:
+    """
+    Convert a time period string, such as "Month to Date", "Last 12 Months", etc
+    to start and end date objects. Returns a tuple (first date, last date)
+    """
+    dates = dates.lower()
+    today = datetime.today()
+    today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+    last_day_of_month = today + relativedelta(day=31)
+    last_day_of_month = last_day_of_month.replace(
+        hour=23, minute=59, second=59, microsecond=999
+    )
+
+    if dates == "month to date":
+        first_date = today - relativedelta(months=5)
+        first_date = datetime(first_date.year, first_date.month, 1)
+        return first_date, last_day_of_month
+    elif dates == "year to date":
+        first_date = datetime(today.year, 1, 1)
+        return first_date, last_day_of_month
+    elif dates == "last year":
+        last_year = today.year - 1
+        first_date = datetime(last_year, 1, 1)
+        last_date = datetime(last_year, 12, 31)
+        return first_date, last_date
+    elif dates == "12 months":
+        first_date = datetime(today.year - 1, today.month, 1)
+        return first_date, last_day_of_month
+    elif dates == "24 months":
+        first_date = datetime(today.year - 2, today.month, 1)
+        return first_date, last_day_of_month
+    elif dates == "5 years":
+        first_date = datetime(today.year - 5, today.month, 1)
+        return first_date, last_day_of_month
+    else:
+        return None, None
