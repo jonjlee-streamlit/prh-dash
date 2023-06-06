@@ -106,7 +106,7 @@ def _show_volumes(settings: dict, data: data.RadsData):
 
 
 def _show_hours(settings, data):
-    pass
+    st.write(data.hours)
 
 
 def _filter_by_period(df, period_str, col_idx):

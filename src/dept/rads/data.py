@@ -62,6 +62,9 @@ class RadsData:
 
     # Volumes calculated from billing
 
+    # Productive / Non-productive hours for this month
+    hours: pd.DataFrame
+
     # Calculated statistics
     stats: dict
 
@@ -75,7 +78,7 @@ def process(settings: dict, raw: RawData) -> RadsData:
     dept, month = settings["dept"], settings["month"]
     income_stmt = None
     volumes = None
-    volume = 0
+    hours = None
 
     if len(raw.income_statements) > 0:
         # Combine and normalize all income statment data into one table
@@ -97,6 +100,12 @@ def process(settings: dict, raw: RawData) -> RadsData:
         volumes = _filter_by_dept(volumes, settings["dept"])
         volumes = volumes.sort_values(by=volumes.columns[0], ascending=False)
 
+    if len(raw.hours_by_month) > 0:
+        hours = [
+            df for df in raw.hours_by_month if df.iloc[0, 0] == pd.to_datetime(month)
+        ]
+        hours = hours[0] if len(hours) > 0 else None
+
     # Pre-calculate statistics to display
     stats = _calc_stats(settings, raw, volumes)
 
@@ -106,6 +115,7 @@ def process(settings: dict, raw: RawData) -> RadsData:
         raw=raw,
         income_stmt=income_stmt,
         volumes=volumes,
+        hours=hours,
         stats=stats,
     )
 

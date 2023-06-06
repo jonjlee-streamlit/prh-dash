@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from ...util import df_get_tables_by_columns, df_get_tables_by_rows
+from ...util import df_get_tables_by_columns, df_get_tables_by_rows, df_get_val_or_range
 from ...RawData import RawData
 
 KNOWN_RADS_DEPT_NUMBERS = [
@@ -35,10 +35,8 @@ def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> RawData:
         volumes = df_get_tables_by_columns(df, "6:14")
         return RawData(rads_volumes=volumes)
     elif hours_file:
-        # Productive and non-productive hours
-        sheet2 = pd.read_excel(contents, sheet_name=1, header=None)
-        hours_by_pay_period = df_get_tables_by_rows(df, "A:S", start_row_idx=4)
-        hours_by_month = df_get_tables_by_rows(sheet2, "A:R", start_row_idx=3)
+        # Extract tables of productive and non-productive hours
+        hours_by_pay_period, hours_by_month = _parse_hours_file(contents)
         return RawData(
             hours_by_pay_period=hours_by_pay_period, hours_by_month=hours_by_month
         )
@@ -72,8 +70,25 @@ def _is_hours_file(df, excel_sheets):
     """
     Detect if valid hours report file:
     - Excel file with exactly 2 worksheets
+    - 2nd sheet ends in "Monthly Summary"
     - First worksheet is for pay periods. A8 should contain a recognized rads department number
     """
-    if not len(excel_sheets) == 2:
+    if not (len(excel_sheets) == 2 and excel_sheets[1].endswith("Monthly Summary")):
         return False
     return df.iloc[7, 0] in KNOWN_RADS_DEPT_NUMBERS
+
+
+def _parse_hours_file(contents):
+    sheet1 = pd.read_excel(contents, sheet_name=0, header=None)
+    sheet2 = pd.read_excel(contents, sheet_name=1, header=None)
+    hours_by_pay_period = df_get_tables_by_rows(sheet1, "A:S", start_row_idx=4)
+    hours_by_month = df_get_tables_by_rows(sheet2, "A:R", start_row_idx=3)
+
+    # Add year to months tables. Usually any data modification should be in data.process(),
+    # but since this worksheet doesn't contain the year anywhere, we have to associate the year
+    # from the first sheet now to prevent loss of data.
+    year = df_get_val_or_range(sheet1, "B6").year
+    for table in hours_by_month:
+        table.iloc[0, 0] = pd.to_datetime(f"{table.iloc[0, 0]} {year}")
+
+    return hours_by_pay_period, hours_by_month
