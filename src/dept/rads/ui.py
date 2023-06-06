@@ -38,10 +38,7 @@ def show_settings() -> dict:
             format_func=DEPT_ID_TO_NAME.get,
         )
 
-        month = st.selectbox(
-            "Month",
-            _prev_months(),
-        )
+        month = st.selectbox("Month", _prev_months(), 2)
 
     return {"dept": dept, "month": month}
 
