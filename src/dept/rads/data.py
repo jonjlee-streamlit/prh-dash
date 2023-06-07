@@ -381,14 +381,23 @@ def _calc_hours_ytd(hours: pd.DataFrame) -> pd.DataFrame:
 
 
 def _calc_stats(
-    settings: dict, raw: RawData, income_stmt_ytd: pd.DataFrame, volumes: pd.DataFrame, hours_ytd: pd.DataFrame
+    settings: dict,
+    raw: RawData,
+    income_stmt_ytd: pd.DataFrame,
+    volumes: pd.DataFrame,
+    hours_ytd: pd.DataFrame,
 ) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
     # Income statement totals
-    ytd_revenue = income_stmt_ytd[income_stmt_ytd["hier"] == "Net Revenue"]
-    ytd_revenue = ytd_revenue["Actual"].iloc[0] if ytd_revenue.shape[0] else 0
-    ytd_expense = income_stmt_ytd[income_stmt_ytd["hier"] == "Total Operating Expenses"]
-    ytd_expense = ytd_expense["Actual"].iloc[0] if ytd_expense.shape[0] else 0
+    ytd_revenue = 0
+    ytd_expense = 0
+    if income_stmt_ytd is not None and income_stmt_ytd.shape[0]:
+        ytd_revenue = income_stmt_ytd[income_stmt_ytd["hier"] == "Net Revenue"]
+        ytd_revenue = ytd_revenue["Actual"].iloc[0] if ytd_revenue.shape[0] else 0
+        ytd_expense = income_stmt_ytd[
+            income_stmt_ytd["hier"] == "Total Operating Expenses"
+        ]
+        ytd_expense = ytd_expense["Actual"].iloc[0] if ytd_expense.shape[0] else 0
 
     # Get the volume for the selected month by the user, which will be in the format "Jan 2023"
     month = settings["month"]
@@ -397,7 +406,9 @@ def _calc_stats(
     ytd_volume = _calc_volumes_ytd(volumes)
 
     # Hours data
-    ytd_hours = hours_ytd["Total Paid Hours"].iloc[0]
+    ytd_hours = 0
+    if hours_ytd is not None and hours_ytd.shape[0]:
+        ytd_hours = hours_ytd["Total Paid Hours"].iloc[0]
 
     s = {
         # Volume for this month and YTD
@@ -406,6 +417,6 @@ def _calc_stats(
         # KPIs
         "revenue_per_volume": ytd_revenue / ytd_volume,
         "expense_per_volume": ytd_expense / ytd_volume,
-        "hours_per_volume": ytd_hours / ytd_volume
+        "hours_per_volume": ytd_hours / ytd_volume,
     }
     return s
