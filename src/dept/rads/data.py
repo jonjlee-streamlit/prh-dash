@@ -349,6 +349,7 @@ def _calc_hours_for_month(hours: pd.DataFrame, month) -> pd.DataFrame:
 def _calc_hours_ytd(hours: pd.DataFrame) -> pd.DataFrame:
     today = date.today()
     first_day = date(today.year, 1, 1)
+    num_days = (today - first_day).days
     hours = hours[
         (hours["month"] >= pd.to_datetime(first_day))
         & (hours["month"] <= pd.to_datetime(today))
@@ -362,7 +363,7 @@ def _calc_hours_ytd(hours: pd.DataFrame) -> pd.DataFrame:
             hours["productive"].sum(),
             hours["nonproductive"].sum(),
             hours["total"].sum(),
-            hours["fte"].sum(),
+            hours["total"].sum() / (FTE_HOURS_PER_DAY * num_days),
         ]
 
     ret = pd.DataFrame(
