@@ -276,6 +276,17 @@ def period_str_to_dates(dates: str) -> typing.Tuple[datetime, datetime]:
         return None, None
 
 
+def month_str_to_dates(month_str: str) -> typing.Tuple[datetime, datetime]:
+    """
+    Convert a month string, such as "Jan 2023" to start and end datetime objects.
+    Returns a tuple (first datetime, last datetime).
+    """
+    first_day = datetime.strptime(month_str, "%b %Y")
+    last_day = first_day + relativedelta(day=31)
+    last_day = last_day.replace(hour=23, minute=59, second=59, microsecond=999)
+    return (first_day, last_day)
+
+
 # -----------------------------------
 # Finance functions
 # -----------------------------------

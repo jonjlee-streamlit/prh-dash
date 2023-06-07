@@ -210,3 +210,21 @@ def fte_fig(src, budget_fte):
         margin={"t": 0},
     )
     st.plotly_chart(fig, use_container_width=True)
+
+
+def hours_fig(src):
+    df = src[["month", "productive", "nonproductive"]]
+    df.columns = ["Month", "Productive", "Non-productive"]
+    fig = px.bar(
+        df,
+        x=df.columns[0],
+        y=[df.columns[1], df.columns[2]],
+        text_auto=".1f",
+    )
+    fig.update_yaxes(title_text="Hours")
+    fig.update_layout(legend_title_text="")
+    # Remove excessive top margin
+    fig.update_layout(
+        margin={"t": 0},
+    )
+    st.plotly_chart(fig, use_container_width=True)

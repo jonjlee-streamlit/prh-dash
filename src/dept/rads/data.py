@@ -237,17 +237,6 @@ def _normalize_volumes(volumes: list[pd.DataFrame]):
     return df
 
 
-def _month_str_to_dates(month_str: str) -> typing.Tuple[datetime, datetime]:
-    """
-    Convert a month string, such as "Jan 2023" to start and end datetime objects.
-    Returns a tuple (first datetime, last datetime).
-    """
-    first_day = datetime.strptime(month_str, "%b %Y")
-    last_day = first_day + relativedelta(day=31)
-    last_day = last_day.replace(hour=23, minute=59, second=59, microsecond=999)
-    return (first_day, last_day)
-
-
 def _filter_volumes_by_dept(df: pd.DataFrame, dept: str) -> pd.DataFrame:
     # Retain month column and column with the ID of the desired deptartment.
     # The department names in the source data are changed to the canonical

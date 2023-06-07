@@ -163,7 +163,7 @@ def _show_hours(settings, data):
 
     # Show graph of historical FTE. Allow user to select how many months to show.
     st.write("&nbsp;")
-    st.subheader("FTE")
+    st.subheader("FTE and Hours")
     col_graph, col_period = st.columns((13, 3))
     with col_period:
         fte_period = st.selectbox(
@@ -174,8 +174,12 @@ def _show_hours(settings, data):
         )
 
     with col_graph:
+        col1, col2 = st.columns(2)
         df = _filter_by_period(data.hours, fte_period, 1)
-        figs.fte_fig(df, data.stats["budget_fte"])
+        with col1:
+            figs.fte_fig(df, data.stats["budget_fte"])
+        with col2:
+            figs.hours_fig(data.hours)
 
 
 def _filter_by_period(df, period_str, col_idx):
