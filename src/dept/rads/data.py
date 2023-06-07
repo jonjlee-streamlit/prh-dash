@@ -45,7 +45,8 @@ DEPT_ID_MAP = {
 }
 
 # Ratio to convert hours into FTE equivalent
-FTE_HOURS_PER_DAY = 2080 / 365
+FTE_HOURS_PER_YEAR = 2080
+FTE_HOURS_PER_DAY = FTE_HOURS_PER_YEAR / 365
 
 
 @dataclass(frozen=True)
@@ -389,34 +390,104 @@ def _calc_stats(
 ) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
     # Income statement totals
-    ytd_revenue = 0
-    ytd_expense = 0
+    ytd_revenue, ytd_budget_revenue = 0, 0
+    ytd_expense, ytd_budget_expense = 0, 0
     if income_stmt_ytd is not None and income_stmt_ytd.shape[0]:
-        ytd_revenue = income_stmt_ytd[income_stmt_ytd["hier"] == "Net Revenue"]
-        ytd_revenue = ytd_revenue["Actual"].iloc[0] if ytd_revenue.shape[0] else 0
-        ytd_expense = income_stmt_ytd[
-            income_stmt_ytd["hier"] == "Total Operating Expenses"
-        ]
-        ytd_expense = ytd_expense["Actual"].iloc[0] if ytd_expense.shape[0] else 0
+        df = income_stmt_ytd[income_stmt_ytd["hier"] == "Net Revenue"]
+        if df.shape[0]:
+            ytd_revenue = df["Actual"].iloc[0]
+            ytd_budget_revenue = df["Budget"].iloc[0]
+
+        df = income_stmt_ytd[income_stmt_ytd["hier"] == "Total Operating Expenses"]
+        if df.shape[0]:
+            ytd_expense = df["Actual"].iloc[0]
+            ytd_budget_expense = df["Actual"].iloc[0]
 
     # Get the volume for the selected month by the user, which will be in the format "Jan 2023"
-    month = settings["month"]
-    df = volumes.loc[volumes["Month"] == pd.to_datetime(month)]
+    month = pd.to_datetime(settings["month"])
+    df = volumes.loc[volumes["Month"] == month]
     month_volume = df.iloc[0, 1] if df.shape[0] > 0 else 0
     ytd_volume = _calc_volumes_ytd(volumes)
 
+    # Hardcoded budgeted volumes - no source data available yet
+    budget_volumes = {
+        DEPT_MRI: 3750,
+        DEPT_CT: 6000,
+        DEPT_XR: 16700,
+        DEPT_ULTRASOUND: 6400,
+        DEPT_MAMMOGRAPHY: 3250,
+        DEPT_NUCLEAR: 1350,
+    }
+    ytd_budget_volume = budget_volumes.get(settings["dept"], 0) * (
+        date.today().month / 12
+    )
+
     # Hours data
+    ytd_prod_hours = 0
     ytd_hours = 0
     if hours_ytd is not None and hours_ytd.shape[0]:
+        ytd_prod_hours = hours_ytd["Productive Hours"].iloc[0]
         ytd_hours = hours_ytd["Total Paid Hours"].iloc[0]
 
+    # Hardcoded budgeted hours - no source data available yet
+    budget_hours_per_volume_by_dept = {
+        DEPT_MRI: 2.47,
+        DEPT_CT: 0.30,
+        DEPT_XR: 1.53,
+        DEPT_ULTRASOUND: 1.62,
+        DEPT_MAMMOGRAPHY: 1.35,
+        DEPT_NUCLEAR: 2.53,
+    }
+    budget_fte_by_dept = {
+        DEPT_MRI: 5.5,
+        DEPT_CT: 1.0,
+        DEPT_XR: 14.0,
+        DEPT_ULTRASOUND: 5.9,
+        DEPT_MAMMOGRAPHY: 2.6,
+        DEPT_NUCLEAR: 2.0,
+    }
+    budget_hours_per_volume = budget_hours_per_volume_by_dept.get(settings["dept"], 0)
+    budget_fte = budget_fte_by_dept.get(settings["dept"], 0)
+
     s = {
-        # Volume for this month and YTD
         "month_volume": 0 if pd.isna(month_volume) else month_volume,
         "ytd_volume": ytd_volume,
-        # KPIs
-        "revenue_per_volume": ytd_revenue / ytd_volume,
-        "expense_per_volume": ytd_expense / ytd_volume,
-        "hours_per_volume": ytd_hours / ytd_volume,
+        "budget_fte": budget_fte,
     }
+
+    # KPIs
+    s["revenue_per_volume"] = ytd_revenue / ytd_volume
+    s["expense_per_volume"] = ytd_expense / ytd_volume
+
+    if ytd_budget_volume and ytd_budget_revenue and ytd_budget_expense:
+        s["target_revenue_per_volume"] = ytd_budget_revenue / ytd_budget_volume
+        s["variance_revenue_per_volume"] = round(
+            (s["revenue_per_volume"] / s["target_revenue_per_volume"] - 1) * 100
+        )
+        s["target_expense_per_volume"] = ytd_budget_expense / ytd_budget_volume
+        s["variance_expense_per_volume"] = round(
+            (s["expense_per_volume"] / s["target_expense_per_volume"] - 1) * 100
+        )
+    else:
+        s["target_revenue_per_volume"] = 0
+        s["variance_revenue_per_volume"] = 0
+        s["target_expense_per_volume"] = 0
+        s["variance_expense_per_volume"] = 0
+
+    s["hours_per_volume"] = ytd_hours / ytd_volume
+    s["target_hours_per_volume"] = budget_hours_per_volume
+    s["variance_hours_per_volume"] = (
+        s["target_hours_per_volume"] - s["hours_per_volume"]
+    )
+    if ytd_hours:
+        s["fte_variance"] = (s["variance_hours_per_volume"] * ytd_volume) / (
+            FTE_HOURS_PER_YEAR * (ytd_prod_hours / ytd_hours)
+        )
+        s["fte_variance_dollars"] = (s["variance_hours_per_volume"] * ytd_volume) * (
+            37.06  # Average hourly rate - currently hardcoded
+        )
+    else:
+        s["fte_variance"] = 0
+        s["fte_variance_dollars"] = 0
+
     return s

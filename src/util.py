@@ -274,3 +274,11 @@ def period_str_to_dates(dates: str) -> typing.Tuple[datetime, datetime]:
         return first_date, last_day_of_month
     else:
         return None, None
+
+
+# -----------------------------------
+# Finance functions
+# -----------------------------------
+def format_finance(n):
+    """Return a number formatted a finance amount - dollar sign, two decimal places, commas, negative values wrapped in parens"""
+    return "${0:,.2f}".format(n) if n >= 0 else "(${0:,.2f})".format(abs(n))

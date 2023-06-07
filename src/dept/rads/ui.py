@@ -33,7 +33,6 @@ def show_settings() -> dict:
                 data.DEPT_ULTRASOUND,
                 data.DEPT_NUCLEAR,
                 data.DEPT_MAMMOGRAPHY,
-                data.DEPT_IMAGING_SERVICES,
             ),
             format_func=DEPT_ID_TO_NAME.get,
         )
@@ -80,12 +79,41 @@ def _show_kpi(settings: dict, data: data.RadsData):
 
     st.subheader("KPIs")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Revenue per Exam", "$%s" % round(s["revenue_per_volume"]))
-    col2.metric("Expense per Exam", "$%s" % round(s["expense_per_volume"]))
+    col1.metric(
+        "Revenue per Exam",
+        "$%s" % round(s["revenue_per_volume"]),
+        f"{s['variance_revenue_per_volume']}% {'above' if s['revenue_per_volume'] >= s['target_revenue_per_volume'] else 'below'} target",
+    )
+    col2.metric(
+        "Target Revenue per Exam", "$%s" % round(s["target_revenue_per_volume"])
+    )
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric(
+        "Expense per Encounter",
+        "$%s" % round(s["expense_per_volume"]),
+        delta=f"{s['variance_expense_per_volume']}% {'above' if s['expense_per_volume'] >= s['target_expense_per_volume'] else 'below'} target",
+        delta_color="inverse",
+    )
+    col2.metric(
+        "Target Expense per Encounter",
+        f"${round(s['target_expense_per_volume'])}",
+    )
 
     st.subheader("Productivity")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Hours per Encounter", round(s["hours_per_volume"], 2))
+    col1.metric("Hours per Exam", round(s["hours_per_volume"], 2))
+    col2.metric("Target Hours per Exam", s["target_hours_per_volume"])
+    col1.metric("FTE Variance", round(s["fte_variance"], 2))
+
+    v = s["fte_variance_dollars"]
+    color = "rgb(255, 43, 43)" if v < 0 else "rgb(9, 171, 59)"
+    col2.markdown(
+        "<p style='font-size:14px;'>Dollar Impact</p>"
+        + f"<p style='margin-top:-15px; font-size:2rem; color:{color}'>{util.format_finance(v)}</p>"
+        + f"<p style='margin-top:-15px; font-size:14px;'>using avg hourly rate $37.06</p>",
+        unsafe_allow_html=True,
+    )
 
 
 def _show_income_stmt(settings: dict, data: data.RadsData):
@@ -147,7 +175,7 @@ def _show_hours(settings, data):
 
     with col_graph:
         df = _filter_by_period(data.hours, fte_period, 1)
-        figs.fte_fig(df)
+        figs.fte_fig(df, data.stats["budget_fte"])
 
 
 def _filter_by_period(df, period_str, col_idx):

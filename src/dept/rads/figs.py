@@ -169,26 +169,25 @@ def hours_table(hours_for_month, hours_ytd):
     st.markdown(styled_df.to_html(), unsafe_allow_html=True)
 
 
-def fte_fig(src):
+def fte_fig(src, budget_fte):
     df = src[["month", "fte"]]
     df.columns = ["Month", "FTE"]
     fig = px.bar(
         df, x=df.columns[0], y=df.columns[1], text=df.columns[1], text_auto=".1f"
     )
     # Horizontal budget line
-    fte_budget = 8.0
     fig.add_hline(
-        y=fte_budget + 0.05,
+        y=budget_fte + 0.05,
         line=dict(color="red", width=3),
         layer="below",
     )
     # Text for budget line. Place over last visible month and shift to the right by 80 pixels.
     fig.add_annotation(
         x=df["Month"].iloc[-1],
-        y=8,
+        y=budget_fte,
         xref="x",
         yref="y",
-        text=f"Budget: {fte_budget}",
+        text=f"Budget: {budget_fte}",
         showarrow=False,
         font=dict(size=14, color="red"),
         align="left",
