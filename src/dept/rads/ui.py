@@ -61,10 +61,12 @@ def show(settings: dict, data: data.RadsData):
     month_str = datetime.strftime(month, "%B %Y")
 
     st.title(f"Radiology · {DEPT_ID_TO_NAME[settings['dept']]} · {month_str}")
-    tab_income_stmt, tab_hours, tab_volumes = st.tabs(
-        ["Income Statement", "FTE", "Volumes"]
+    tab_kpi, tab_income_stmt, tab_hours, tab_volumes = st.tabs(
+        ["KPI & Productivity", "Income Statement", "FTE", "Volumes"]
     )
 
+    with tab_kpi:
+        _show_kpi(settings, data)
     with tab_income_stmt:
         _show_income_stmt(settings, data)
     with tab_volumes:
@@ -73,10 +75,23 @@ def show(settings: dict, data: data.RadsData):
         _show_hours(settings, data)
 
 
+def _show_kpi(settings: dict, data: data.RadsData):
+    s = data.stats
+
+    st.subheader("KPIs")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Revenue per Exam", "$%s" % round(s["revenue_per_volume"]))
+    col2.metric("Expense per Exam", "$%s" % round(s["expense_per_volume"]))
+
+    st.subheader("Productivity")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Hours per Encounter", round(s["hours_per_volume"], 2))
+
+
 def _show_income_stmt(settings: dict, data: data.RadsData):
     col_month, col_ytd = st.columns(2)
     with col_month:
-        st.subheader("Month to Date")
+        st.subheader(settings["month"])
         if data.income_stmt is not None:
             figs.aggrid_income_stmt(data.income_stmt)
         else:
@@ -91,10 +106,10 @@ def _show_income_stmt(settings: dict, data: data.RadsData):
 
 
 def _show_volumes(settings: dict, data: data.RadsData):
-    volume = data.stats.get("volume")
-    volume = 0 if pd.isnull(volume) else volume
-
-    st.metric(f"{settings['month']} Volume", volume)
+    st.subheader("Summary")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric(f"{settings['month']} Volume", data.stats["month_volume"])
+    col2.metric(f"YTD Volume", data.stats["ytd_volume"])
 
     # Show graph of historical volumes. Allow user to select how many months to show.
     st.subheader("Volumes by Month")
@@ -115,7 +130,7 @@ def _show_hours(settings, data):
         return st.write("No data for this month")
 
     # Show productive / non-productive hours for month
-    st.subheader("Hours")
+    st.subheader("Summary")
     figs.hours_table(data.hours_for_month, data.hours_ytd)
 
     # Show graph of historical FTE. Allow user to select how many months to show.

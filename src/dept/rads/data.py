@@ -121,7 +121,7 @@ def process(settings: dict, raw: RawData) -> RadsData:
         hours_ytd = _calc_hours_ytd(hours)
 
     # Pre-calculate statistics to display
-    stats = _calc_stats(settings, raw, income_stmt_ytd, volumes)
+    stats = _calc_stats(settings, raw, income_stmt_ytd, volumes, hours_ytd)
 
     return RadsData(
         dept=dept,
@@ -256,6 +256,16 @@ def _filter_volumes_by_dept(df: pd.DataFrame, dept: str) -> pd.DataFrame:
     return df
 
 
+def _calc_volumes_ytd(df: pd.DataFrame) -> int:
+    today = date.today()
+    first_day = date(today.year, 1, 1)
+    df = df[
+        (df["Month"] >= pd.to_datetime(first_day))
+        & (df["Month"] <= pd.to_datetime(today))
+    ]
+    return df["Volume"].fillna(0).sum(numeric_only=True)
+
+
 def _normalize_hours(hours: list[pd.DataFrame]):
     """
     Combine separate hours tables into a single dataframe.
@@ -371,16 +381,31 @@ def _calc_hours_ytd(hours: pd.DataFrame) -> pd.DataFrame:
 
 
 def _calc_stats(
-    settings: dict, raw: RawData, income_stmt_ytd: pd.DataFrame, volumes: pd.DataFrame
+    settings: dict, raw: RawData, income_stmt_ytd: pd.DataFrame, volumes: pd.DataFrame, hours_ytd: pd.DataFrame
 ) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
+    # Income statement totals
+    ytd_revenue = income_stmt_ytd[income_stmt_ytd["hier"] == "Net Revenue"]
+    ytd_revenue = ytd_revenue["Actual"].iloc[0] if ytd_revenue.shape[0] else 0
+    ytd_expense = income_stmt_ytd[income_stmt_ytd["hier"] == "Total Operating Expenses"]
+    ytd_expense = ytd_expense["Actual"].iloc[0] if ytd_expense.shape[0] else 0
+
     # Get the volume for the selected month by the user, which will be in the format "Jan 2023"
     month = settings["month"]
     df = volumes.loc[volumes["Month"] == pd.to_datetime(month)]
-    volume = df.iloc[0, 1] if df.shape[0] > 0 else 0
+    month_volume = df.iloc[0, 1] if df.shape[0] > 0 else 0
+    ytd_volume = _calc_volumes_ytd(volumes)
+
+    # Hours data
+    ytd_hours = hours_ytd["Total Paid Hours"].iloc[0]
 
     s = {
-        # Volume for this month
-        "volume": volume
+        # Volume for this month and YTD
+        "month_volume": 0 if pd.isna(month_volume) else month_volume,
+        "ytd_volume": ytd_volume,
+        # KPIs
+        "revenue_per_volume": ytd_revenue / ytd_volume,
+        "expense_per_volume": ytd_expense / ytd_volume,
+        "hours_per_volume": ytd_hours / ytd_volume
     }
     return s
