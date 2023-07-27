@@ -1,0 +1,14 @@
+{
+  "name": "streamlit-status",
+  "version": "0.1.0",
+  "description": "Workers implementation using Browser Rendering API to check status for deployed webapps",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@cloudflare/puppeteer": "^0.0.2-alpha"
+  }
+}

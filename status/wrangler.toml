@@ -1,0 +1,20 @@
+name = "streamlit-status"
+main = "index.js"
+compatibility_date = "2023-03-14"
+node_compat = true
+workers_dev = true
+
+browser = { binding = "MYBROWSER", type = "browser" }
+
+[triggers]
+# Cron syntax:
+# *     *     *   *    *        command to be executed
+# -     -     -   -    -
+# |     |     |   |    |
+# |     |     |   |    +----- day of week (1 - 7) or 3 letter abbrevs
+# |     |     |   +------- month (1 - 12)
+# |     |     +--------- day of month (1 - 31)
+# |     +----------- hour (0 - 23)
+# +------------- min (0 - 59)
+# Run at 9:03 every M,W,F,Sa. 
+crons = ["3 9 * * mon,wed,fri,sat"]
