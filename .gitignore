@@ -2,6 +2,7 @@ data/
 .streamlit/secrets.toml
 **/node_modules
 *.rdp
+*.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

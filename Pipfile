@@ -9,6 +9,7 @@ xlrd = "*"
 plotly = "*"
 openpyxl = "*"
 streamlit-aggrid = "*"
+sqlalchemy = "*"
 
 [dev-packages]
 black = "*"
