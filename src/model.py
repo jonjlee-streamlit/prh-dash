@@ -18,17 +18,10 @@ class SourceMetadata(Base):
     modified = mapped_column(DateTime, nullable=False)
 
 
-class Dept(Base):
-    __tablename__ = "depts"
-    id = mapped_column(Integer, primary_key=True)
-    wd_id = mapped_column(String(10), nullable=False, unique=True, index=True)
-    name = mapped_column(String, nullable=False)
-
-
 class Volume(Base):
     __tablename__ = "volumes"
     id = mapped_column(Integer, primary_key=True)
+    dept_wd_id = mapped_column(String(10), nullable=False)
+    dept_name = mapped_column(String, nullable=False)
     period = mapped_column(Date, nullable=False)
     volume = mapped_column(Integer)
-
-    dept = relationship("Dept", back_populates="volumes")
