@@ -31,6 +31,6 @@ Sample financial dashboard built on [Streamlit](https://streamlit.io/)
 - Running on a shared computer
   - If python is installed in user space only in a non-standard path, it will be easier to just use the global `lib` directory for modules.
   - Download a python zip from https://www.python.org/downloads/windows/, and unzip
-  - Update `python._pth` in the install dir to include `lib/site-packages`
+  - If embeddable python package used, remove `python._pth` in the install dir to disable isolated mode, which makes python ignore modules in the project directory. (https://github.com/python/cpython/issues/93875, https://docs.python.org/3/using/cmdline.html#generic-options)
   - Update your path to include the install dir and `<install dir>/scripts/`
   - Set the python interpreter in VSCode User Settings and select the interpreter as above in the VSCode section
