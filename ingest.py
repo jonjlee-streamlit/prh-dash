@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from src.model import Base, SourceMetadata
+from src.model import Base, SourceMetadata, Volume
 from src import util
 
 # DB definitions
@@ -122,8 +122,8 @@ def read_volume_data(filename):
     #
     # to format we can store to DB:
     #
-    # Year   Month   DeptID    DeptName              Volume
-    # 2022   01      CC_60100  INTENSIVE CARE UNIT   62
+    # Month     DeptID    DeptName              Volume
+    # 2022-01   CC_60100  INTENSIVE CARE UNIT   62
     # ...
 
     data = []
@@ -141,13 +141,13 @@ def read_volume_data(filename):
 
             # Iterate over volume numbers in columns C:N. enumerate(..., start=1) results in month = [1..12]
             volumes = row.iloc[2 : 2 + 12]
-            for month, volume in enumerate(volumes, start=1):
+            for month_num, volume in enumerate(volumes, start=1):
                 if pd.notnull(volume):
-                    data.append([dept_wd_id, dept_name, year, month, volume])
+                    # Format month column like "2022-01"
+                    month = f"{year:04d}-{month_num:02d}"
+                    data.append([dept_wd_id, dept_name, month, volume])
 
-    return pd.DataFrame(
-        data, columns=["dept_wd_id", "dept_name", "year", "month", "volume"]
-    )
+    return pd.DataFrame(data, columns=["dept_wd_id", "dept_name", "month", "volume"])
 
 
 if __name__ == "__main__":
@@ -160,9 +160,15 @@ if __name__ == "__main__":
     engine = create_engine(f"sqlite:///{DB_FILE}", echo=True)
     create_schema(engine)
 
-    # Read volume data
-    df = read_volume_data(VOLUMES_FILE)
-    print(df)
+    # Extract and load volume data
+    volumes_df = read_volume_data(VOLUMES_FILE)
+    volumes_df.to_sql(
+        Volume.__tablename__,
+        con=engine,
+        index_label="id",
+        if_exists="append",
+        method="multi",
+    )
 
     # Update modified times for source data files
     income_stmt_files = find_data_files(INCOME_STMT_PATH)

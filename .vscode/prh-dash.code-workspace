@@ -5,12 +5,11 @@
     }
   ],
   "settings": {
-		"python.formatting.provider": "black",
+    "python.formatting.provider": "black",
     "editor.formatOnSave": true,
-    "python.testing.pytestArgs": [
-        "test"
-    ],
+    "python.testing.pytestArgs": ["test"],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
-}
+    "python.testing.pytestEnabled": true,
+    "sqlite.recordsPerPage": 1000
+  }
 }
