@@ -4,8 +4,8 @@ import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from src.model import Base, SourceMetadata, Volume
-from src.static_data import WDID_TO_DEPT_NAME
+from src.model import Base, SourceMetadata, Volume, BudgetedHoursPerVolume
+from src.static_data import WDID_TO_DEPT_NAME, DEPT_NAME_TO_WDID
 from src import util
 
 # DB definitions
@@ -156,10 +156,56 @@ def read_budgeted_hours_data(filename, sheet):
     """
     Read the Excel sheet with volume data into a dataframe
     """
-    # Read tables from excel worksheet
+    # Extract table from Productive Hours per Encounter -> Summary worksheet. Pull Department and Suggested columns
     xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
     hrs_per_encounter_df = util.df_get_table(xl_data, "B2", has_header_row=True)
-    return hrs_per_encounter_df[["Department", "Suggested"]]
+
+    # Transform
+    # ---------
+    # Rename columns to match DB
+    hrs_per_encounter_df.rename(
+        columns={"Department": "dept_name", "Suggested": "budgeted_hours_per_volume"},
+        inplace=True,
+    )
+    # Add a new column "dept_wd_id" using dict, and drop rows without a known workday dept ID
+    hrs_per_encounter_df["dept_wd_id"] = (
+        hrs_per_encounter_df["dept_name"]
+        .str.lower()
+        .map({k.lower(): v for k, v in DEPT_NAME_TO_WDID.items()})
+    )
+    hrs_per_encounter_df.dropna(subset=["dept_wd_id"], inplace=True)
+    # Reassign canonical dept names from workday ID using dict
+    hrs_per_encounter_df["dept_name"] = hrs_per_encounter_df["dept_wd_id"].map(
+        WDID_TO_DEPT_NAME
+    )
+
+    return hrs_per_encounter_df[
+        ["dept_wd_id", "dept_name", "budgeted_hours_per_volume"]
+    ]
+
+
+def clear_table_and_insert_data(session, table, df, df_column_order=None):
+    """
+    Deletes rows from the given table and reinsert data from dataframe
+    table is a SQLAlchemy mapped class
+    df_column_order specifies the names of the columns in df so they match the order of the table's SQLAlchemy definition
+    """
+    # Clear data in DB table
+    session.query(table).delete()
+    session.commit()
+
+    # Reorder columns to match SQLAlchema table definition
+    if df_column_order is not None:
+        df = df[df_column_order]
+
+    # Load data into table using Pandas to_sql
+    df.to_sql(
+        table.__tablename__,
+        con=session.bind,
+        index=False,
+        if_exists="append",
+        method="multi",
+    )
 
 
 if __name__ == "__main__":
@@ -176,19 +222,16 @@ if __name__ == "__main__":
     engine = create_engine(f"sqlite:///{DB_FILE}", echo=True)
     create_schema(engine)
 
-    # Extract and load volume data
+    # Extract volume data
     volumes_df = read_volume_data(VOLUMES_FILE, VOLUMES_SHEET)
-    volumes_df.to_sql(
-        Volume.__tablename__,
-        con=engine,
-        index_label="id",
-        if_exists="replace",
-        method="multi",
-    )
-
     budgeted_hours_df = read_budgeted_hours_data(
         BUDGETED_HOURS_FILE, BUDGETED_HOURS_SHEET
     )
+
+    # Load data into DB. Clear each table prior to loading from dataframe
+    with Session(engine) as session:
+        clear_table_and_insert_data(session, Volume, volumes_df)
+        clear_table_and_insert_data(session, BudgetedHoursPerVolume, budgeted_hours_df)
 
     # Update modified times for source data files
     income_stmt_files = find_data_files(INCOME_STMT_PATH)
