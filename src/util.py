@@ -33,16 +33,29 @@ def df_get_val_or_range(df: pd.DataFrame, cell_range: str) -> pd.DataFrame:
         return df.iloc[row - 1, col - 1]
 
 
-def df_get_tables_by_columns(df: pd.DataFrame, rows: str) -> list[pd.DataFrame]:
+def df_convert_first_row_to_column_names(df: pd.DataFrame) -> pd.DataFrame:
     """
-    REturns a list of dataframes representing tables in the original dataframe based on specified rows.
+    Given a dataframe, get the columns names from the first row, then drops the row
+    """
+    columns = df.iloc[0]
+    df = df.iloc[1:].reset_index(drop=True)
+    df.columns = columns
+    return df
+
+
+def df_get_tables_by_columns(
+    df: pd.DataFrame, rows: str, limit: int = 0
+) -> list[pd.DataFrame]:
+    """
+    Returns a list of dataframes representing tables in the original dataframe based on specified rows.
     rows is specified in Excel A1-notation, eg. 5:10
+    Specify limit > 0 to return a maximum number of tables
     """
     ret = []
     start_col = 0
     row_indices = _rows_A1_to_idx_list(rows)
 
-    while True:
+    while (limit == 0) or (len(ret) < limit):
         # Find the next nonempty column after the current start_col
         nonempty_col = df_next_col(df, rows, start_col_idx=start_col)
 
@@ -68,17 +81,18 @@ def df_get_tables_by_columns(df: pd.DataFrame, rows: str) -> list[pd.DataFrame]:
 
 
 def df_get_tables_by_rows(
-    df: pd.DataFrame, cols: str, start_row_idx: int = 0
+    df: pd.DataFrame, cols: str, start_row_idx: int = 0, limit: int = 0
 ) -> list[pd.DataFrame]:
     """
     Yields dataframes representing tables in the original dataframe with data in specified columns.
     cols is specified in Excel A1-notation, eg. A:F
+    Specify limit > 0 to return a maximum number of tables
     """
     ret = []
     start_row = start_row_idx
     col_indices = _cols_A1_to_idx_list(cols)
 
-    while True:
+    while (limit == 0) or (len(ret) < limit):
         # Find the next nonempty row after the current start_row
         nonempty_row = df_next_row(df, cols, start_row_idx=start_row)
 
@@ -101,6 +115,43 @@ def df_get_tables_by_rows(
         start_row = empty_row
 
     return ret
+
+
+def df_get_table(
+    df: pd.DataFrame, start_cell: str, has_header_row: bool = True
+) -> pd.DataFrame:
+    """
+    Returns a dataframe with the first table in the original dataframe starting at the given cell in A1 notation.
+    cols is specified in Excel A1-notation, eg. A:F
+    """
+    # Convert starting cell address from A1 notation to int. cell.coordinate_to_tuple() is 1 based
+    row_start_idx, col_start_idx = cell.coordinate_to_tuple(start_cell)
+    row_start_idx = row_start_idx - 1
+    col_start_idx = col_start_idx - 1
+
+    # Determine columns range of table by finding the first empty cell by column
+    col_end_idx = df.shape[1]
+    for col in range(col_start_idx, df.shape[1]):
+        if pd.isna(df.iloc[row_start_idx, col]):
+            col_end_idx = col - 1
+            break
+
+    # Determine row range of table by finding the empty row across all columns
+    row_end_idx = df.shape[0]
+    for row in range(row_start_idx, df.shape[0]):
+        row_data = df.iloc[row, col_start_idx:col_end_idx]
+        if row_data.isnull().all():
+            row_end_idx = row - 1
+            break
+
+    # Extract table
+    table = df.iloc[row_start_idx:row_end_idx, col_start_idx:col_end_idx]
+
+    # Use first row as column names if indicated
+    if has_header_row:
+        table = df_convert_first_row_to_column_names(table)
+
+    return table
 
 
 def df_next_row(
@@ -132,7 +183,7 @@ def df_next_empty_row(df: pd.DataFrame, columns: str, start_row_idx: int = 0) ->
     Given a dataframe, starting row offset, and set of columns, returns the next row index where all the columns are empty.
     columns is specified in Excel A1-notation, eg. A:F,AB,ZZ
     """
-    return df_next_row(df, columns, start_row_idx, True)
+    return df_next_row(df, columns, start_row_idx, find_empty=True)
 
 
 def df_next_col(
@@ -163,7 +214,7 @@ def df_next_empty_col(df: pd.DataFrame, rows: str, start_col_idx: int = 0) -> in
     Given a dataframe, starting column offset, and set of rows, returns the next column index where all the rows are empty.
     rows is specified in Excel A1-notation or row numbers (first row is 1), eg. 1:5,10,15
     """
-    return df_next_col(df, rows, start_col_idx, True)
+    return df_next_col(df, rows, start_col_idx, find_empty=True)
 
 
 def _cols_A1_to_idx_list(columns: str) -> list[int]:

@@ -22,6 +22,14 @@ class Volume(Base):
     __tablename__ = "volumes"
     id = mapped_column(Integer, primary_key=True)
     dept_wd_id = mapped_column(String(10), nullable=False)
-    dept_name = mapped_column(String, nullable=False)
+    dept_name = mapped_column(String, nullable=True)
     month = mapped_column(String(7), nullable=False)
-    volume = mapped_column(Integer)
+    volume = mapped_column(Integer, nullable=False)
+
+
+class BudgetedHoursPerVolume(Base):
+    __tablename__ = "budgeted_hours_per_volume"
+    id = mapped_column(Integer, primary_key=True)
+    dept_wd_id = mapped_column(String(10), nullable=False)
+    dept_name = mapped_column(String, nullable=True)
+    budgeted_hours_per_volume = mapped_column(Float, nullable=False)

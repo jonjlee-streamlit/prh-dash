@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from src.model import Base, SourceMetadata, Volume
+from src.static_data import WDID_TO_DEPT_NAME
 from src import util
 
 # DB definitions
@@ -20,6 +21,7 @@ VOLUMES_SHEET = "STATS"
 BUDGETED_HOURS_FILE = os.path.join(
     BASE_PATH, "Productive Hours per Encounter 2023.xlsx"
 )
+BUDGETED_HOURS_SHEET = "Summary"
 
 # The Natural Class subdir contains income statment in one Excel file per month, eg,
 # ./Natural Class/2022/(01) Jan 2022 Natural Class.xlsx",
@@ -57,7 +59,7 @@ def update_sources_meta(engine, files):
         session.commit()
 
 
-def verify_data_dir():
+def sanity_check_data_dir():
     """
     Sanity checks for data directory
     """
@@ -107,12 +109,12 @@ def read_file(filename):
         return f.read()
 
 
-def read_volume_data(filename):
+def read_volume_data(filename, sheet):
     """
     Read the Excel sheet with volume data into a dataframe
     """
     # Read tables from excel worksheet
-    xl_data = pd.read_excel(filename, sheet_name=VOLUMES_SHEET, header=None)
+    xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
     volumes_by_year = util.df_get_tables_by_columns(xl_data, "1:68")
 
     # Convert from multiple tables:
@@ -150,24 +152,42 @@ def read_volume_data(filename):
     return pd.DataFrame(data, columns=["dept_wd_id", "dept_name", "month", "volume"])
 
 
+def read_budgeted_hours_data(filename, sheet):
+    """
+    Read the Excel sheet with volume data into a dataframe
+    """
+    # Read tables from excel worksheet
+    xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
+    hrs_per_encounter_df = util.df_get_table(xl_data, "B2", has_header_row=True)
+    return hrs_per_encounter_df[["Department", "Suggested"]]
+
+
 if __name__ == "__main__":
     # Sanity check data directory expected location and files
-    if not verify_data_dir():
+    if not sanity_check_data_dir():
         print("ERROR: data directory error (see above). Terminating.")
         exit(1)
+
+    # TODO: data verification
+    # - VOLUMES_FILE, List worksheet: verify same data as static_data.WDID_TO_DEPTNAME
+    # - BUDGETED_HOURS_FILE, Summary worksheet: verify Department and Suggested columns present
 
     # Create the empty SQLite database file
     engine = create_engine(f"sqlite:///{DB_FILE}", echo=True)
     create_schema(engine)
 
     # Extract and load volume data
-    volumes_df = read_volume_data(VOLUMES_FILE)
+    volumes_df = read_volume_data(VOLUMES_FILE, VOLUMES_SHEET)
     volumes_df.to_sql(
         Volume.__tablename__,
         con=engine,
         index_label="id",
-        if_exists="append",
+        if_exists="replace",
         method="multi",
+    )
+
+    budgeted_hours_df = read_budgeted_hours_data(
+        BUDGETED_HOURS_FILE, BUDGETED_HOURS_SHEET
     )
 
     # Update modified times for source data files
