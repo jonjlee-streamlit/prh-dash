@@ -33,6 +33,24 @@ def df_get_val_or_range(df: pd.DataFrame, cell_range: str) -> pd.DataFrame:
         return df.iloc[row - 1, col - 1]
 
 
+def df_find_by_column(df: pd.DataFrame, text: str, start_cell: str = "A1") -> tuple[int, int]:
+    """
+    Search the dataframe, df, by column for a cell equal to the given value, text.
+    Return the (row, col) of the cell or None if not found
+    start_cell is the cell to start searching from in A1 notation
+    """
+    # Convert A1 to row, col. These will be 1-based
+    start_row, start_col = cell.coordinate_to_tuple(start_cell)
+
+    for col_idx in range(start_col - 1, df.shape[1]):
+        column = df.iloc[:, col_idx]
+        for row_idx, cell_value in enumerate(column):
+            if str(cell_value) == text:
+                # Return (row, column). start_row is 1-based
+                return row_idx + start_row - 1, col_idx
+    
+    return None
+
 def df_convert_first_row_to_column_names(df: pd.DataFrame) -> pd.DataFrame:
     """
     Given a dataframe, get the columns names from the first row, then drops the row

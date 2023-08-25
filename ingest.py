@@ -183,6 +183,37 @@ def read_budgeted_hours_data(filename, sheet):
         ["dept_wd_id", "dept_name", "budgeted_hours_per_volume"]
     ]
 
+def read_income_stmt_data(files): 
+    """
+    Read and combine data from Excel workbooks for income statements, which are per month
+    """
+    for file in files:
+        # Extract data from first and only worksheet
+        xl_data = pd.read_excel(file, header=None)
+        
+        # There are a couple formats of these files - 2023 files have metadata in the first few rows,
+        # but older ones don't. First, find cell with the value of "Ledger Account", which is always
+        # in the upper left of the table. 
+        (row_idx, col_idx) = util.df_find_by_column(xl_data, "Ledger Account")
+
+        # Get the month from the row above the table, column E, which should read "Month to Date: <MM/YYYY>"
+        # Convert it to the format YYYY-MM
+        # Also, row_idx is 0-based, so to get the row above, just pass in row_idx
+        month = util.df_get_val_or_range(xl_data, f"E{row_idx}")
+        month = datetime.strptime(month, "Month to Date: %m/%Y")
+        month = month.strftime("%Y-%m")
+
+        # Get the full table of data
+        [income_stmt_df] = util.df_get_tables_by_rows(xl_data, "A:Q", start_row_idx=row_idx, limit=1)
+        income_stmt_df = util.df_convert_first_row_to_column_names(income_stmt_df)
+
+        # Keep the first 4 columns, Ledger Account, Cost Center, Spend Category, and Revenue Category
+        # Keep the actual and budget columns for the month and year
+        income_stmt_df = income_stmt_df.iloc[:, [0, 1, 2, 3, 4, 5, 11, 12]]
+
+        # Add the month as a column
+        income_stmt_df['month'] = month
+        print(income_stmt_df)
 
 def clear_table_and_insert_data(session, table, df, df_column_order=None):
     """
@@ -214,19 +245,26 @@ if __name__ == "__main__":
         print("ERROR: data directory error (see above). Terminating.")
         exit(1)
 
+    # Get list of dynamic data files, ie data organized as one Excel workbook per month 
+    income_stmt_files = find_data_files(INCOME_STMT_PATH)
+    fte_files = find_data_files(FTE_PATH)
+    source_files = [VOLUMES_FILE, BUDGETED_HOURS_FILE] + income_stmt_files + fte_files
+
     # TODO: data verification
     # - VOLUMES_FILE, List worksheet: verify same data as static_data.WDID_TO_DEPTNAME
     # - BUDGETED_HOURS_FILE, Summary worksheet: verify Department and Suggested columns present
+    # - Each income statement sheet has Ledger Account cell, and data in columns A:Q
 
     # Create the empty SQLite database file
     engine = create_engine(f"sqlite:///{DB_FILE}", echo=True)
     create_schema(engine)
 
-    # Extract volume data
+    # Extract and perform basic transformation of data from spreadsheets
     volumes_df = read_volume_data(VOLUMES_FILE, VOLUMES_SHEET)
     budgeted_hours_df = read_budgeted_hours_data(
         BUDGETED_HOURS_FILE, BUDGETED_HOURS_SHEET
     )
+    income_stmt_df = read_income_stmt_data(income_stmt_files)
 
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(engine) as session:
@@ -234,7 +272,4 @@ if __name__ == "__main__":
         clear_table_and_insert_data(session, BudgetedHoursPerVolume, budgeted_hours_df)
 
     # Update modified times for source data files
-    income_stmt_files = find_data_files(INCOME_STMT_PATH)
-    fte_files = find_data_files(FTE_PATH)
-    source_files = [VOLUMES_FILE, BUDGETED_HOURS_FILE] + income_stmt_files + fte_files
     update_sources_meta(engine, source_files)
