@@ -189,7 +189,9 @@ def read_income_stmt_data(files):
     """
     for file in files:
         # Extract data from first and only worksheet
-        xl_data = pd.read_excel(file, header=None)
+        # Keep the first 4 columns, Ledger Account, Cost Center, Spend Category, and Revenue Category
+        # Keep the actual and budget columns for the month (E:F) and year (L:M)
+        xl_data = pd.read_excel(file, header=None, usecols="A:D,E:F,L:M")
         
         # There are a couple formats of these files - 2023 files have metadata in the first few rows,
         # but older ones don't. First, find cell with the value of "Ledger Account", which is always
@@ -204,12 +206,7 @@ def read_income_stmt_data(files):
         month = month.strftime("%Y-%m")
 
         # Get the full table of data
-        [income_stmt_df] = util.df_get_tables_by_rows(xl_data, "A:Q", start_row_idx=row_idx, limit=1)
-        income_stmt_df = util.df_convert_first_row_to_column_names(income_stmt_df)
-
-        # Keep the first 4 columns, Ledger Account, Cost Center, Spend Category, and Revenue Category
-        # Keep the actual and budget columns for the month and year
-        income_stmt_df = income_stmt_df.iloc[:, [0, 1, 2, 3, 4, 5, 11, 12]]
+        income_stmt_df = util.df_get_table(xl_data, start_cell=f"A{row_idx+1}", has_header_row=True)
 
         # Add the month as a column
         income_stmt_df['month'] = month
