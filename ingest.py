@@ -1,14 +1,16 @@
 import os
+import contextlib
 import logging
 import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from src.model import Base, SourceMetadata, Volume, BudgetedHoursPerVolume
-from src.static_data import WDID_TO_DEPT_NAME, DEPT_NAME_TO_WDID
+from src.static_data import WDID_TO_DEPT_NAME, ALIASES_TO_WDID
 from src import util
 
 # DB definitions
+TMP_DB_FILE = "db-tmp.sqlite3"
 DB_FILE = "db.sqlite3"
 
 # Location of data files: <app root>/data/
@@ -24,17 +26,17 @@ BUDGETED_HOURS_FILE = os.path.join(
 BUDGETED_HOURS_SHEET = "Summary"
 
 # The Natural Class subdir contains income statment in one Excel file per month, eg,
-# ./Natural Class/2022/(01) Jan 2022 Natural Class.xlsx",
+# ./Natural Class/2022/(01) Jan 2022 Natural Class.xlsx
 INCOME_STMT_PATH = os.path.join(BASE_PATH, "Natural Class")
 
-# The PayPeriod subdir contains two types of excel files with hours/FTE information.
-# History data is in PayPeriod/2022/PP#1-PP#25 Payroll Productivity.xlsx
-# The other files contain data for a single pay period, eg,
-# PayPeriod/2022/PP#26 2022 Payroll_Productivity_by_Cost_Center.xlsx
-HISTORICAL_FTE_PATH = FTE_PATH = os.path.join(
+# PayPeriod subdir contians productive / non-productive hours and FTE data per month. eg,
+#   ./PayPeriod/2023/PP#1 2023 Payroll_Productivity_by_Cost_Center.xlsx
+# In addition, historical data for 2022 PP#1-25, which includes the clinic network, is lumped together a separate file:
+#   ./PayPeriod/2023/PP#1-PP#25 Payroll Productivity.xlsx
+HISTORICAL_HOURS_FILE = os.path.join(
     BASE_PATH, "PayPeriod", "2022", "PP#1-PP#25 Payroll Productivity.xlsx"
 )
-FTE_PATH = os.path.join(BASE_PATH, "PayPeriod")
+HOURS_PATH = os.path.join(BASE_PATH, "PayPeriod")
 
 
 def create_schema(engine):
@@ -77,8 +79,8 @@ def sanity_check_data_dir():
         or len(find_data_files(INCOME_STMT_PATH)) == 0
     ):
         error = f"ERROR: income statements root directory is empty: {INCOME_STMT_PATH}"
-    if not os.path.isdir(FTE_PATH) or len(find_data_files(FTE_PATH)) == 0:
-        error = f"ERROR: productivity data root directory is empty: {FTE_PATH}"
+    if not os.path.isdir(HOURS_PATH) or len(find_data_files(HOURS_PATH)) == 0:
+        error = f"ERROR: productivity data root directory is empty: {HOURS_PATH}"
 
     if error is not None:
         print(error)
@@ -86,7 +88,7 @@ def sanity_check_data_dir():
     return True
 
 
-def find_data_files(path):
+def find_data_files(path, exclude=None):
     """
     Return list of full path for all files in a directory recursively.
     Filter out any files starting with . or ~.
@@ -96,7 +98,10 @@ def find_data_files(path):
         for file in files:
             # Filter out temporary files: anything that starts with . or ~
             if not file.startswith(".") and not file.startswith("~"):
-                ret.append(os.path.join(dirpath, file))
+                # Filter out explicitly excluded files
+                filepath = os.path.join(dirpath, file)
+                if exclude is None or filepath not in exclude:
+                    ret.append(filepath)
     return ret
 
 
@@ -171,7 +176,7 @@ def read_budgeted_hours_data(filename, sheet):
     hrs_per_encounter_df["dept_wd_id"] = (
         hrs_per_encounter_df["dept_name"]
         .str.lower()
-        .map({k.lower(): v for k, v in DEPT_NAME_TO_WDID.items()})
+        .map({k.lower(): v for k, v in ALIASES_TO_WDID.items()})
     )
     hrs_per_encounter_df.dropna(subset=["dept_wd_id"], inplace=True)
     # Reassign canonical dept names from workday ID using dict
@@ -183,7 +188,8 @@ def read_budgeted_hours_data(filename, sheet):
         ["dept_wd_id", "dept_name", "budgeted_hours_per_volume"]
     ]
 
-def read_income_stmt_data(files): 
+
+def read_income_stmt_data(files):
     """
     Read and combine data from Excel workbooks for income statements, which are per month
     """
@@ -192,25 +198,56 @@ def read_income_stmt_data(files):
         # Keep the first 4 columns, Ledger Account, Cost Center, Spend Category, and Revenue Category
         # Keep the actual and budget columns for the month (E:F) and year (L:M)
         xl_data = pd.read_excel(file, header=None, usecols="A:D,E:F,L:M")
-        
+
         # There are a couple formats of these files - 2023 files have metadata in the first few rows,
         # but older ones don't. First, find cell with the value of "Ledger Account", which is always
-        # in the upper left of the table. 
-        (row_idx, col_idx) = util.df_find_by_column(xl_data, "Ledger Account")
+        # in the upper left of the table.
+        (row_start, _col) = util.df_find_by_column(xl_data, "Ledger Account")
 
         # Get the month from the row above the table, column E, which should read "Month to Date: <MM/YYYY>"
         # Convert it to the format YYYY-MM
         # Also, row_idx is 0-based, so to get the row above, just pass in row_idx
-        month = util.df_get_val_or_range(xl_data, f"E{row_idx}")
+        month = util.df_get_val_or_range(xl_data, f"E{row_start}")
         month = datetime.strptime(month, "Month to Date: %m/%Y")
         month = month.strftime("%Y-%m")
 
-        # Get the full table of data
-        income_stmt_df = util.df_get_table(xl_data, start_cell=f"A{row_idx+1}", has_header_row=True)
+        # Drop the non-data rows and apply header row to column names
+        income_stmt_df = xl_data.iloc[row_start:]
+        income_stmt_df = util.df_convert_first_row_to_column_names(income_stmt_df)
 
         # Add the month as a column
-        income_stmt_df['month'] = month
+        income_stmt_df["month"] = month
         print(income_stmt_df)
+
+
+def read_hours_and_fte_data(files):
+    """
+    Read and combine data from per-month Excel workbooks for productive vs non-productive hours and total FTE
+    """
+    for file in files:
+        # Extract data from first and only worksheet
+        print(file)
+        xl_data = pd.read_excel(file, header=None)
+
+        # Drop any metadata rows prior to start of table, which has the "Department Number" header in the top left.
+        (row_start, _col) = util.df_find_by_column(xl_data, "Department Number")
+        df = xl_data.iloc[row_start:]
+        df = util.df_convert_first_row_to_column_names(df)
+
+        # Drop next row, which are sub-headers. Keep specific columns as listed below.
+        df = df.loc[
+            1:,
+            [
+                "Department Number",
+                "Department Name",
+                "Total Productive Hours",
+                "Total Non-Productive Hours",
+                "Total Productive/Non-Productive Hours",
+                "Total FTE",
+            ],
+        ]
+        print(df)
+
 
 def clear_table_and_insert_data(session, table, df, df_column_order=None):
     """
@@ -242,18 +279,20 @@ if __name__ == "__main__":
         print("ERROR: data directory error (see above). Terminating.")
         exit(1)
 
-    # Get list of dynamic data files, ie data organized as one Excel workbook per month 
+    # Get list of dynamic data files, ie data organized as one Excel workbook per month
     income_stmt_files = find_data_files(INCOME_STMT_PATH)
-    fte_files = find_data_files(FTE_PATH)
-    source_files = [VOLUMES_FILE, BUDGETED_HOURS_FILE] + income_stmt_files + fte_files
+    hours_files = find_data_files(HOURS_PATH, exclude=[HISTORICAL_HOURS_FILE])
+    source_files = [VOLUMES_FILE, BUDGETED_HOURS_FILE] + income_stmt_files + hours_files
 
     # TODO: data verification
     # - VOLUMES_FILE, List worksheet: verify same data as static_data.WDID_TO_DEPTNAME
     # - BUDGETED_HOURS_FILE, Summary worksheet: verify Department and Suggested columns present
     # - Each income statement sheet has Ledger Account cell, and data in columns A:Q
 
-    # Create the empty SQLite database file
-    engine = create_engine(f"sqlite:///{DB_FILE}", echo=True)
+    # Create the empty temporary database file
+    with contextlib.suppress(FileNotFoundError):
+        os.remove(TMP_DB_FILE)
+    engine = create_engine(f"sqlite:///{TMP_DB_FILE}", echo=True)
     create_schema(engine)
 
     # Extract and perform basic transformation of data from spreadsheets
@@ -262,6 +301,8 @@ if __name__ == "__main__":
         BUDGETED_HOURS_FILE, BUDGETED_HOURS_SHEET
     )
     income_stmt_df = read_income_stmt_data(income_stmt_files)
+    hours_df = read_hours_and_fte_data(hours_files)
+    exit()
 
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(engine) as session:
@@ -270,3 +311,6 @@ if __name__ == "__main__":
 
     # Update modified times for source data files
     update_sources_meta(engine, source_files)
+
+    # Move new database in place
+    os.replace(TMP_DB_FILE, DB_FILE)
