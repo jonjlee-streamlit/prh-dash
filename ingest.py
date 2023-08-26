@@ -292,8 +292,8 @@ if __name__ == "__main__":
     # Create the empty temporary database file
     with contextlib.suppress(FileNotFoundError):
         os.remove(TMP_DB_FILE)
-    engine = create_engine(f"sqlite:///{TMP_DB_FILE}", echo=True)
-    create_schema(engine)
+    db = create_engine(f"sqlite:///{TMP_DB_FILE}", echo=True)
+    create_schema(db)
 
     # Extract and perform basic transformation of data from spreadsheets
     volumes_df = read_volume_data(VOLUMES_FILE, VOLUMES_SHEET)
@@ -302,15 +302,15 @@ if __name__ == "__main__":
     )
     income_stmt_df = read_income_stmt_data(income_stmt_files)
     hours_df = read_hours_and_fte_data(hours_files)
-    exit()
 
     # Load data into DB. Clear each table prior to loading from dataframe
-    with Session(engine) as session:
+    with Session(db) as session:
         clear_table_and_insert_data(session, Volume, volumes_df)
         clear_table_and_insert_data(session, BudgetedHoursPerVolume, budgeted_hours_df)
 
     # Update modified times for source data files
-    update_sources_meta(engine, source_files)
+    update_sources_meta(db, source_files)
 
     # Move new database in place
+    db.dispose()
     os.replace(TMP_DB_FILE, DB_FILE)
