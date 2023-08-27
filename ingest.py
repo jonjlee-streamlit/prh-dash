@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from src.model import Base, SourceMetadata, Volume, BudgetedHoursPerVolume
+from src.model import Base, SourceMetadata, Volume, BudgetedHoursPerVolume, IncomeStmt
 from src.static_data import WDID_TO_DEPT_NAME, ALIASES_TO_WDID
 from src import util
 
@@ -33,6 +33,7 @@ INCOME_STMT_PATH = os.path.join(BASE_PATH, "Natural Class")
 #   ./PayPeriod/2023/PP#1 2023 Payroll_Productivity_by_Cost_Center.xlsx
 # In addition, historical data for 2022 PP#1-25, which includes the clinic network, is lumped together a separate file:
 #   ./PayPeriod/2023/PP#1-PP#25 Payroll Productivity.xlsx
+HISTORICAL_HOURS_YEAR = 2022
 HISTORICAL_HOURS_FILE = os.path.join(
     BASE_PATH, "PayPeriod", "2022", "PP#1-PP#25 Payroll Productivity.xlsx"
 )
@@ -193,6 +194,7 @@ def read_income_stmt_data(files):
     """
     Read and combine data from Excel workbooks for income statements, which are per month
     """
+    ret = []
     for file in files:
         # Extract data from first and only worksheet
         # Keep the first 4 columns, Ledger Account, Cost Center, Spend Category, and Revenue Category
@@ -217,25 +219,116 @@ def read_income_stmt_data(files):
 
         # Add the month as a column
         income_stmt_df["month"] = month
-        print(income_stmt_df)
+
+        # Replace all cells with "(Blank)" with actual nulls
+        income_stmt_df = income_stmt_df.replace("(Blank)", None)
+
+        # Rename and reorder columns
+        income_stmt_df.columns = [
+            "ledger_acct",
+            "cost_center",
+            "spend_category",
+            "revenue_category",
+            "actual",
+            "budget",
+            "actual_ytd",
+            "budget_ytd",
+            "month",
+        ]
+        ret.append(income_stmt_df)
+
+    return pd.concat(ret)
+
+
+def read_historical_hours_and_fte_data(file):
+    """
+    Read historical hours/FTE data from the custom formatted Excel workbook
+    """
+    # Extract data from first and only worksheet
+    logging.info(f"Reading {file}")
+    xl_data = pd.read_excel(file, header=None, usecols="A,B,G,M,N,AB")
+
+    # Loop over tables in worksheet, each one representing a pay period
+    ret = []
+    last_table_end = 0
+    while True:
+        # Locate the next table by finding the cell containing "PAY PERIOD" in column A
+        table_start = util.df_find_by_column(
+            xl_data, "PAY PERIOD", start_cell=f"A{last_table_end+1}"
+        )
+        if table_start is None:
+            break
+
+        # Locate end of the table by finding the cell containing "TOTAL" in column B
+        row_start = table_start[0]
+        (row_end, _col) = util.df_find_by_column(
+            xl_data, "TOTAL", start_cell=f"B{row_start+1}"
+        )
+        last_table_end = row_end + 1
+
+        # Extract table without 4 header rows or last 3 total rows
+        hours_df = xl_data.iloc[row_start + 4 : row_end - 2]
+        hours_df.columns = [
+            "Department Number",
+            "Department Name",
+            "prod_hrs",
+            "nonprod_hrs",
+            "total_hrs",
+            "total_fte",
+        ]
+
+        # Add the year and pay period number as a column
+        hours_df["year"] = HISTORICAL_HOURS_YEAR
+        hours_df["pp_num"] = xl_data.iloc[row_start + 1, 0]
+
+        # Transform
+        # ---------
+        # Add a new column "dept_wd_id" using dict, and drop rows without a known workday dept ID
+        hours_df["dept_wd_id"] = (
+            hours_df["Department Name"]
+            .str.lower()
+            .map({k.lower(): v for k, v in ALIASES_TO_WDID.items()})
+        )
+        hours_df.dropna(subset=["dept_wd_id"], inplace=True)
+        # Reassign canonical dept names from workday ID using dict
+        hours_df["dept_name"] = hours_df["dept_wd_id"].map(WDID_TO_DEPT_NAME)
+
+        # Reorder and retain columns corresponding to DB table
+        ret.append(
+            hours_df[
+                [
+                    "year",
+                    "pp_num",
+                    "dept_wd_id",
+                    "dept_name",
+                    "prod_hrs",
+                    "nonprod_hrs",
+                    "total_hrs",
+                    "total_fte",
+                ]
+            ]
+        )
+
+    return pd.concat(ret)
 
 
 def read_hours_and_fte_data(files):
     """
     Read and combine data from per-month Excel workbooks for productive vs non-productive hours and total FTE
     """
+    ret = []
     for file in files:
         # Extract data from first and only worksheet
-        print(file)
+        logging.info(f"Reading {file}")
         xl_data = pd.read_excel(file, header=None)
 
         # Drop any metadata rows prior to start of table, which has the "Department Number" header in the top left.
         (row_start, _col) = util.df_find_by_column(xl_data, "Department Number")
-        df = xl_data.iloc[row_start:]
-        df = util.df_convert_first_row_to_column_names(df)
+        hours_df = xl_data.iloc[row_start:]
+        hours_df = util.df_convert_first_row_to_column_names(hours_df)
 
         # Drop next row, which are sub-headers. Keep specific columns as listed below.
-        df = df.loc[
+        hours_df = hours_df.loc[
             1:,
             [
                 "Department Number",
@@ -246,7 +339,43 @@ def read_hours_and_fte_data(files):
                 "Total FTE",
             ],
         ]
-        print(df)
+
+        # Transform
+        # ---------
+        # Add a new column "dept_wd_id" using dict, and drop rows without a known workday dept ID
+        hours_df["dept_wd_id"] = (
+            hours_df["Department Name"]
+            .str.lower()
+            .map({k.lower(): v for k, v in ALIASES_TO_WDID.items()})
+        )
+        hours_df.dropna(subset=["dept_wd_id"], inplace=True)
+        # Reassign canonical dept names from workday ID using dict
+        hours_df["dept_name"] = hours_df["dept_wd_id"].map(WDID_TO_DEPT_NAME)
+
+        # Rename and reorder columns
+        hours_df.rename(
+            columns={
+                "Total Productive Hours": "prod_hrs",
+                "Total Non-Productive Hours": "nonprod_hrs",
+                "Total Productive/Non-Productive Hours": "total_hrs",
+                "Total FTE": "total_fte",
+            },
+            inplace=True,
+        )
+        ret.append(
+            hours_df[
+                [
+                    "dept_wd_id",
+                    "dept_name",
+                    "prod_hrs",
+                    "nonprod_hrs",
+                    "total_hrs",
+                    "total_fte",
+                ]
+            ]
+        )
+
+    return pd.concat(ret)
 
 
 def clear_table_and_insert_data(session, table, df, df_column_order=None):
@@ -300,13 +429,15 @@ if __name__ == "__main__":
     budgeted_hours_df = read_budgeted_hours_data(
         BUDGETED_HOURS_FILE, BUDGETED_HOURS_SHEET
     )
-    income_stmt_df = read_income_stmt_data(income_stmt_files)
+    historical_hours_df = read_historical_hours_and_fte_data(HISTORICAL_HOURS_FILE)
     hours_df = read_hours_and_fte_data(hours_files)
+    income_stmt_df = read_income_stmt_data(income_stmt_files)
 
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(db) as session:
         clear_table_and_insert_data(session, Volume, volumes_df)
         clear_table_and_insert_data(session, BudgetedHoursPerVolume, budgeted_hours_df)
+        clear_table_and_insert_data(session, IncomeStmt, income_stmt_df)
 
     # Update modified times for source data files
     update_sources_meta(db, source_files)

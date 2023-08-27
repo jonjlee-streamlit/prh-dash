@@ -34,6 +34,7 @@ class BudgetedHoursPerVolume(Base):
     dept_name = mapped_column(String, nullable=True)
     budgeted_hours_per_volume = mapped_column(Float, nullable=False)
 
+
 class IncomeStmt(Base):
     __tablename__ = "income_stmt"
     id = mapped_column(Integer, primary_key=True)
@@ -46,4 +47,3 @@ class IncomeStmt(Base):
     budget = mapped_column(Float, nullable=False)
     actual_ytd = mapped_column(Float, nullable=False)
     budget_ytd = mapped_column(Float, nullable=False)
-    
