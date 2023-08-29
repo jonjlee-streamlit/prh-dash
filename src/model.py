@@ -35,6 +35,19 @@ class BudgetedHoursPerVolume(Base):
     budgeted_hours_per_volume = mapped_column(Float, nullable=False)
 
 
+class HoursAndFTE(Base):
+    __tablename__ = "hours_fte"
+    id = mapped_column(Integer, primary_key=True)
+    year = mapped_column(Integer, nullable=False)
+    pay_period = mapped_column(Integer, nullable=False)
+    dept_wd_id = mapped_column(String(10), nullable=False)
+    dept_name = mapped_column(String, nullable=True)
+    prod_hrs = mapped_column(Float, nullable=False)
+    nonprod_hrs = mapped_column(Float, nullable=False)
+    total_hrs = mapped_column(Float, nullable=False)
+    total_fte = mapped_column(Float, nullable=False)
+
+
 class IncomeStmt(Base):
     __tablename__ = "income_stmt"
     id = mapped_column(Integer, primary_key=True)

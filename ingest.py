@@ -1,13 +1,25 @@
 import os
+import re
 import contextlib
 import logging
 import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from src.model import Base, SourceMetadata, Volume, BudgetedHoursPerVolume, IncomeStmt
+from src.model import (
+    Base,
+    SourceMetadata,
+    Volume,
+    BudgetedHoursPerVolume,
+    HoursAndFTE,
+    IncomeStmt,
+)
 from src.static_data import WDID_TO_DEPT_NAME, ALIASES_TO_WDID
 from src import util
+
+# Logging definitions
+logging.basicConfig(level=logging.INFO)
+SHOW_SQL_IN_LOG = False
 
 # DB definitions
 TMP_DB_FILE = "db-tmp.sqlite3"
@@ -103,7 +115,8 @@ def find_data_files(path, exclude=None):
                 filepath = os.path.join(dirpath, file)
                 if exclude is None or filepath not in exclude:
                     ret.append(filepath)
-    return ret
+
+    return sorted(ret)
 
 
 def read_file(filename):
@@ -120,6 +133,7 @@ def read_volume_data(filename, sheet):
     Read the Excel sheet with volume data into a dataframe
     """
     # Read tables from excel worksheet
+    logging.info(f"Reading {filename}")
     xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
     volumes_by_year = util.df_get_tables_by_columns(xl_data, "1:68")
 
@@ -163,6 +177,7 @@ def read_budgeted_hours_data(filename, sheet):
     Read the Excel sheet with volume data into a dataframe
     """
     # Extract table from Productive Hours per Encounter -> Summary worksheet. Pull Department and Suggested columns
+    logging.info(f"Reading {filename}")
     xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
     hrs_per_encounter_df = util.df_get_table(xl_data, "B2", has_header_row=True)
 
@@ -199,6 +214,7 @@ def read_income_stmt_data(files):
         # Extract data from first and only worksheet
         # Keep the first 4 columns, Ledger Account, Cost Center, Spend Category, and Revenue Category
         # Keep the actual and budget columns for the month (E:F) and year (L:M)
+        logging.info(f"Reading {file}")
         xl_data = pd.read_excel(file, header=None, usecols="A:D,E:F,L:M")
 
         # There are a couple formats of these files - 2023 files have metadata in the first few rows,
@@ -240,13 +256,13 @@ def read_income_stmt_data(files):
     return pd.concat(ret)
 
 
-def read_historical_hours_and_fte_data(file):
+def read_historical_hours_and_fte_data(filename):
     """
     Read historical hours/FTE data from the custom formatted Excel workbook
     """
     # Extract data from first and only worksheet
-    logging.info(f"Reading {file}")
-    xl_data = pd.read_excel(file, header=None, usecols="A,B,G,M,N,AB")
+    logging.info(f"Reading {filename}")
+    xl_data = pd.read_excel(filename, header=None, usecols="A,B,G,M,N,AB")
 
     # Loop over tables in worksheet, each one representing a pay period
     ret = []
@@ -267,7 +283,7 @@ def read_historical_hours_and_fte_data(file):
         last_table_end = row_end + 1
 
         # Extract table without 4 header rows or last 3 total rows
-        hours_df = xl_data.iloc[row_start + 4 : row_end - 2]
+        hours_df = xl_data.iloc[row_start + 4 : row_end - 2].copy()
         hours_df.columns = [
             "Department Number",
             "Department Name",
@@ -279,7 +295,7 @@ def read_historical_hours_and_fte_data(file):
 
         # Add the year and pay period number as a column
         hours_df["year"] = HISTORICAL_HOURS_YEAR
-        hours_df["pp_num"] = xl_data.iloc[row_start + 1, 0]
+        hours_df["pay_period"] = xl_data.iloc[row_start + 1, 0]
 
         # Transform
         # ---------
@@ -298,7 +314,7 @@ def read_historical_hours_and_fte_data(file):
             hours_df[
                 [
                     "year",
-                    "pp_num",
+                    "pay_period",
                     "dept_wd_id",
                     "dept_name",
                     "prod_hrs",
@@ -316,6 +332,7 @@ def read_hours_and_fte_data(files):
     """
     Read and combine data from per-month Excel workbooks for productive vs non-productive hours and total FTE
     """
+    # There is a PP#n YYYY Payroll_Productivity_by_Cost_Center.xlsx file for each pay period
     ret = []
     for file in files:
         # Extract data from first and only worksheet
@@ -328,6 +345,7 @@ def read_hours_and_fte_data(files):
         hours_df = util.df_convert_first_row_to_column_names(hours_df)
 
         # Drop next row, which are sub-headers. Keep specific columns as listed below.
+        # Find columns by name, because there are a couple different formats with different columns orders.
         hours_df = hours_df.loc[
             1:,
             [
@@ -339,6 +357,11 @@ def read_hours_and_fte_data(files):
                 "Total FTE",
             ],
         ]
+
+        # Read year and pay period number from file name
+        year_pp_num = re.search(r"PP#(\d+) (\d+) ", file, re.IGNORECASE)
+        hours_df["year"] = year_pp_num.group(2)
+        hours_df["pay_period"] = year_pp_num.group(1)
 
         # Transform
         # ---------
@@ -365,6 +388,8 @@ def read_hours_and_fte_data(files):
         ret.append(
             hours_df[
                 [
+                    "year",
+                    "pay_period",
                     "dept_wd_id",
                     "dept_name",
                     "prod_hrs",
@@ -393,6 +418,7 @@ def clear_table_and_insert_data(session, table, df, df_column_order=None):
         df = df[df_column_order]
 
     # Load data into table using Pandas to_sql
+    logging.info(f"Loading table {table}")
     df.to_sql(
         table.__tablename__,
         con=session.bind,
@@ -405,13 +431,18 @@ def clear_table_and_insert_data(session, table, df, df_column_order=None):
 if __name__ == "__main__":
     # Sanity check data directory expected location and files
     if not sanity_check_data_dir():
-        print("ERROR: data directory error (see above). Terminating.")
+        logging.error("ERROR: data directory error (see above). Terminating.")
         exit(1)
 
     # Get list of dynamic data files, ie data organized as one Excel workbook per month
     income_stmt_files = find_data_files(INCOME_STMT_PATH)
     hours_files = find_data_files(HOURS_PATH, exclude=[HISTORICAL_HOURS_FILE])
-    source_files = [VOLUMES_FILE, BUDGETED_HOURS_FILE] + income_stmt_files + hours_files
+    source_files = (
+        [VOLUMES_FILE, BUDGETED_HOURS_FILE, HISTORICAL_HOURS_FILE]
+        + income_stmt_files
+        + hours_files
+    )
+    logging.info(f"Discovered source files: {source_files}")
 
     # TODO: data verification
     # - VOLUMES_FILE, List worksheet: verify same data as static_data.WDID_TO_DEPTNAME
@@ -421,22 +452,25 @@ if __name__ == "__main__":
     # Create the empty temporary database file
     with contextlib.suppress(FileNotFoundError):
         os.remove(TMP_DB_FILE)
-    db = create_engine(f"sqlite:///{TMP_DB_FILE}", echo=True)
+    db = create_engine(f"sqlite:///{TMP_DB_FILE}", echo=SHOW_SQL_IN_LOG)
     create_schema(db)
+    logging.info(f"Created tables in {TMP_DB_FILE}")
 
     # Extract and perform basic transformation of data from spreadsheets
     volumes_df = read_volume_data(VOLUMES_FILE, VOLUMES_SHEET)
     budgeted_hours_df = read_budgeted_hours_data(
         BUDGETED_HOURS_FILE, BUDGETED_HOURS_SHEET
     )
+    income_stmt_df = read_income_stmt_data(income_stmt_files)
     historical_hours_df = read_historical_hours_and_fte_data(HISTORICAL_HOURS_FILE)
     hours_df = read_hours_and_fte_data(hours_files)
-    income_stmt_df = read_income_stmt_data(income_stmt_files)
+    hours_df = pd.concat([historical_hours_df, hours_df])
 
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(db) as session:
         clear_table_and_insert_data(session, Volume, volumes_df)
         clear_table_and_insert_data(session, BudgetedHoursPerVolume, budgeted_hours_df)
+        clear_table_and_insert_data(session, HoursAndFTE, hours_df)
         clear_table_and_insert_data(session, IncomeStmt, income_stmt_df)
 
     # Update modified times for source data files
