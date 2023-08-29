@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from src.model import (
     Base,
+    Metadata,
     SourceMetadata,
     Volume,
     BudgetedHoursPerVolume,
@@ -59,18 +60,29 @@ def create_schema(engine):
     Base.metadata.create_all(engine)
 
 
-def update_sources_meta(engine, files):
+def update_meta(engine, files):
     """
     Populate the sources_meta table with metadata for the source files
     """
     # Get last modified times for each file
     modified = {file: datetime.fromtimestamp(os.path.getmtime(file)) for file in files}
 
-    # Create a session to interact with the database
+    # Write timestamps to DB
+    logging.info("Writing metadata")
     with Session(engine) as session:
+        # Clear metadata tables
+        session.query(Metadata).delete()
+        session.query(SourceMetadata).delete()
+        session.commit()
+
+        # Set last ingest time
+        session.add(Metadata(last_updated=datetime.now()))
+
+        # Store last modified timestamps for ingested files
         for file, modified_time in modified.items():
             source_metadata = SourceMetadata(filename=file, modified=modified_time)
             session.add(source_metadata)
+
         session.commit()
 
 
@@ -473,8 +485,8 @@ if __name__ == "__main__":
         clear_table_and_insert_data(session, HoursAndFTE, hours_df)
         clear_table_and_insert_data(session, IncomeStmt, income_stmt_df)
 
-    # Update modified times for source data files
-    update_sources_meta(db, source_files)
+    # Update last ingest time and modified times for source data files
+    update_meta(db, source_files)
 
     # Move new database in place
     db.dispose()
