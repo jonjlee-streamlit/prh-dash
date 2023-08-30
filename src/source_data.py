@@ -2,6 +2,7 @@
 Source data as in-memory copy of all DB tables as dataframes
 """
 import logging
+import os
 import pandas as pd
 import streamlit as st
 from dataclasses import dataclass, field
@@ -15,6 +16,11 @@ from .model import (
     BudgetedHoursPerVolume,
     HoursAndFTE,
     IncomeStmt,
+)
+
+# Path to default app database
+DEFAULT_DB_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "db.sqlite3"
 )
 
 
@@ -38,15 +44,19 @@ def from_db(db_file: str) -> SourceData:
     Read all data from specified SQLite DB into memory and return as dataframes
     """
     logging.info("Reading DB tables")
+    if not os.path.exists(db_file):
+        return None
+
     engine = create_engine(f"sqlite:///{db_file}")
     with Session(engine) as session:
         # Read metadata
-        metadata = (
-            session.query(Metadata).order_by(Metadata.last_updated.desc()).first()
-        )
-        last_updated = metadata.last_updated if metadata is not None else None
-        sources_updated = {
-            row.filename: row.modified for row in session.query(SourceMetadata)
+        metadata = {
+            "last_updated": session.query(Metadata.last_updated)
+            .order_by(Metadata.last_updated.desc())
+            .scalar(),
+            "sources_updated": {
+                row.filename: row.modified for row in session.query(SourceMetadata)
+            },
         }
 
     # Read dashboard data into dataframes
@@ -60,4 +70,4 @@ def from_db(db_file: str) -> SourceData:
     }
 
     engine.dispose()
-    return SourceData(last_updated=last_updated, sources_updated=sources_updated, **dfs)
+    return SourceData(**metadata, **dfs)
