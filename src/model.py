@@ -42,6 +42,8 @@ class HoursAndFTE(Base):
     pay_period = mapped_column(Integer, nullable=False)
     dept_wd_id = mapped_column(String(10), nullable=False)
     dept_name = mapped_column(String, nullable=True)
+    reg_hrs = mapped_column(Float, nullable=False)
+    overtime_hrs = mapped_column(Float, nullable=False)
     prod_hrs = mapped_column(Float, nullable=False)
     nonprod_hrs = mapped_column(Float, nullable=False)
     total_hrs = mapped_column(Float, nullable=False)

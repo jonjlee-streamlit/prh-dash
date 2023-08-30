@@ -7,7 +7,6 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from src.model import (
-    DB_FILE,
     Base,
     Metadata,
     SourceMetadata,
@@ -16,6 +15,7 @@ from src.model import (
     HoursAndFTE,
     IncomeStmt,
 )
+from src.source_data import DEFAULT_DB_FILE
 from src.static_data import WDID_TO_DEPT_NAME, ALIASES_TO_WDID
 from src import util
 
@@ -274,7 +274,7 @@ def read_historical_hours_and_fte_data(filename):
     """
     # Extract data from first and only worksheet
     logging.info(f"Reading {filename}")
-    xl_data = pd.read_excel(filename, header=None, usecols="A,B,G,M,N,AB")
+    xl_data = pd.read_excel(filename, header=None, usecols="A,B,C,D,E,G,M,N,AB")
 
     # Loop over tables in worksheet, each one representing a pay period
     ret = []
@@ -299,6 +299,9 @@ def read_historical_hours_and_fte_data(filename):
         hours_df.columns = [
             "Department Number",
             "Department Name",
+            "reg_hrs",
+            "ot_hrs",
+            "premium_hrs",
             "prod_hrs",
             "nonprod_hrs",
             "total_hrs",
@@ -311,6 +314,13 @@ def read_historical_hours_and_fte_data(filename):
 
         # Transform
         # ---------
+        # Sum overtime/double and premium hours all into overtime_hrs
+        hours_df["overtime_hrs"] = hours_df["ot_hrs"] + hours_df["premium_hrs"]
+
+        # Interpret NaN as 0 hrs for regular and overtime hours
+        hours_df["reg_hrs"] = hours_df["reg_hrs"].fillna(0)
+        hours_df["overtime_hrs"] = hours_df["overtime_hrs"].fillna(0)
+
         # Add a new column "dept_wd_id" using dict, and drop rows without a known workday dept ID
         hours_df["dept_wd_id"] = (
             hours_df["Department Name"]
@@ -329,6 +339,8 @@ def read_historical_hours_and_fte_data(filename):
                     "pay_period",
                     "dept_wd_id",
                     "dept_name",
+                    "reg_hrs",
+                    "overtime_hrs",
                     "prod_hrs",
                     "nonprod_hrs",
                     "total_hrs",
@@ -355,20 +367,14 @@ def read_hours_and_fte_data(files):
         (row_start, _col) = util.df_find_by_column(xl_data, "Department Number")
         hours_df = xl_data.iloc[row_start:]
         hours_df = util.df_convert_first_row_to_column_names(hours_df)
+        hours_df.columns.values[2] = "reg_hrs"
+        hours_df.columns.values[3] = "CALLBK - CALLBACK"
+        hours_df.columns.values[4] = "DBLTME - DOUBLETIME"
+        hours_df.columns.values[6] = "OT_1.5 - OVERTIME"
 
-        # Drop next row, which are sub-headers. Keep specific columns as listed below.
-        # Find columns by name, because there are a couple different formats with different columns orders.
-        hours_df = hours_df.loc[
-            1:,
-            [
-                "Department Number",
-                "Department Name",
-                "Total Productive Hours",
-                "Total Non-Productive Hours",
-                "Total Productive/Non-Productive Hours",
-                "Total FTE",
-            ],
-        ]
+        # Drop next row, which are sub-headers. Find columns by name, because there are
+        # a couple different formats with different columns orders.
+        hours_df = hours_df.loc[1:]
 
         # Read year and pay period number from file name
         year_pp_num = re.search(r"PP#(\d+) (\d+) ", file, re.IGNORECASE)
@@ -377,6 +383,13 @@ def read_hours_and_fte_data(files):
 
         # Transform
         # ---------
+        # Sum overtime/double and premium hours all into overtime_hrs
+        hours_df["overtime_hrs"] = (
+            hours_df["CALLBK - CALLBACK"]
+            + hours_df["DBLTME - DOUBLETIME"]
+            + hours_df["OT_1.5 - OVERTIME"]
+        )
+
         # Add a new column "dept_wd_id" using dict, and drop rows without a known workday dept ID
         hours_df["dept_wd_id"] = (
             hours_df["Department Name"]
@@ -387,9 +400,10 @@ def read_hours_and_fte_data(files):
         # Reassign canonical dept names from workday ID using dict
         hours_df["dept_name"] = hours_df["dept_wd_id"].map(WDID_TO_DEPT_NAME)
 
-        # Rename and reorder columns
+        # Rename and specific relevant columns to retain
         hours_df.rename(
             columns={
+                "Regular Hours": "reg_hrs",
                 "Total Productive Hours": "prod_hrs",
                 "Total Non-Productive Hours": "nonprod_hrs",
                 "Total Productive/Non-Productive Hours": "total_hrs",
@@ -404,6 +418,8 @@ def read_hours_and_fte_data(files):
                     "pay_period",
                     "dept_wd_id",
                     "dept_name",
+                    "reg_hrs",
+                    "overtime_hrs",
                     "prod_hrs",
                     "nonprod_hrs",
                     "total_hrs",
@@ -489,4 +505,4 @@ if __name__ == "__main__":
 
     # Move new database in place
     db.dispose()
-    os.replace(TMP_DB_FILE, DB_FILE)
+    os.replace(TMP_DB_FILE, DEFAULT_DB_FILE)
