@@ -8,7 +8,7 @@ def run():
     # Fetch source data - do this before auth to ensure all requests to app cause data refresh
     # Read, parse, and cache (via @st.cache_data) source data
     with st.spinner("Initializing..."):
-        src_data = source_data.load_db(DB_FILE)
+        src_data = source_data.from_db(DB_FILE)
 
     # Authenticate user
     if not auth.authenticate():
@@ -17,6 +17,11 @@ def run():
     # Handle routing based on query parameters
     query_params = st.experimental_get_query_params()
     route_id = route.route_by_query(query_params)
+
+    # Check for access to API resources first
+    if route_id == route.CLEAR_CACHE:
+        # Force source_data module to reread DB from disk on next run
+        return st.cache_data.clear()
 
     # Load source data
     if src_data is None:

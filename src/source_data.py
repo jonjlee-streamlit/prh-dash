@@ -33,7 +33,7 @@ class SourceData:
 
 
 @st.cache_data(show_spinner=False)
-def load_db(db_file: str) -> SourceData:
+def from_db(db_file: str) -> SourceData:
     """
     Read all data from specified SQLite DB into memory and return as dataframes
     """
@@ -49,7 +49,7 @@ def load_db(db_file: str) -> SourceData:
             row.filename: row.modified for row in session.query(SourceMetadata)
         }
 
-        # Read dashboard data into dataframes
+    # Read dashboard data into dataframes
     dfs = {
         "volume_df": pd.read_sql_table(Volume.__tablename__, engine),
         "budgeted_hours_per_volume_df": pd.read_sql_table(
@@ -59,4 +59,5 @@ def load_db(db_file: str) -> SourceData:
         "income_stmt_df": pd.read_sql_table(IncomeStmt.__tablename__, engine),
     }
 
+    engine.dispose()
     return SourceData(last_updated=last_updated, sources_updated=sources_updated, **dfs)
