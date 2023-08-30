@@ -1,6 +1,6 @@
 import pandas as pd
 from dataclasses import dataclass
-from ...RawData import RawData
+from ...SourceData import SourceData
 
 
 @dataclass
@@ -8,20 +8,21 @@ class TherapyData:
     """Represents processed data including"""
 
     # Original data set
-    raw: RawData
+    raw: SourceData
 
     # Calculated statistics
     stats: dict
 
 
-def process(settings: dict, raw: RawData) -> TherapyData:
+def process(settings: dict, raw: SourceData) -> TherapyData:
     """
     Receives raw source data from extract_from() and user parameters from sidebar. Partitions and computes statistics to be displayed by the app.
     """
     stats = _calc_stats(settings, raw)
     return TherapyData(raw=raw, stats=stats)
 
-def _calc_stats(settings: dict, raw: RawData) -> dict:
+
+def _calc_stats(settings: dict, raw: SourceData) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
     s = {
         # Totals rows from Income Statement

@@ -7,6 +7,7 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from src.model import (
+    DB_FILE,
     Base,
     Metadata,
     SourceMetadata,
@@ -22,9 +23,8 @@ from src import util
 logging.basicConfig(level=logging.INFO)
 SHOW_SQL_IN_LOG = False
 
-# DB definitions
+# Temporary DB to ingest data into
 TMP_DB_FILE = "db-tmp.sqlite3"
-DB_FILE = "db.sqlite3"
 
 # Location of data files: <app root>/data/
 BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
@@ -436,7 +436,6 @@ def clear_table_and_insert_data(session, table, df, df_column_order=None):
         con=session.bind,
         index=False,
         if_exists="append",
-        method="multi",
     )
 
 

@@ -1,6 +1,10 @@
+import os
 from sqlalchemy import ForeignKey, Integer, String, Float, Date, DateTime
 from sqlalchemy.orm import relationship, mapped_column
 from sqlalchemy.ext.declarative import declarative_base
+
+# Path to default app database
+DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "db.sqlite3")
 
 Base = declarative_base()
 

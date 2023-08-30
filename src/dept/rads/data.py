@@ -5,7 +5,7 @@ import streamlit as st
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from ...RawData import RawData
+from ...SourceData import SourceData
 from ...income_statment import generate_income_stmt
 
 # Dict used to normalize various identifiers for the same department
@@ -54,7 +54,7 @@ class RadsData:
     """Represents processed department specific data"""
 
     # Original data set
-    raw: RawData
+    raw: SourceData
 
     # Settings
     dept: str
@@ -78,7 +78,7 @@ class RadsData:
     stats: dict
 
 
-def process(settings: dict, raw: RawData) -> RadsData:
+def process(settings: dict, raw: SourceData) -> RadsData:
     """
     Receives raw source data from extract_from().
     Partitions and computes statistics to be displayed by the app.
@@ -373,7 +373,7 @@ def _calc_hours_ytd(hours: pd.DataFrame) -> pd.DataFrame:
 
 def _calc_stats(
     settings: dict,
-    raw: RawData,
+    raw: SourceData,
     income_stmt_ytd: pd.DataFrame,
     volumes: pd.DataFrame,
     hours_ytd: pd.DataFrame,

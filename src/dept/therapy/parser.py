@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 from ...util import df_get_val_or_range
-from ...RawData import RawData
+from ...SourceData import SourceData
 
 # Column names from Income Statement sheet, columns B:J
 _INCOME_STMT_COLUMNS = [
@@ -37,7 +37,7 @@ _STATS_COLUMNS = [
 _FTE_COLUMNS = ["Pay Period", "FTEs"]
 
 
-def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> RawData:
+def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> SourceData:
     """
     Read data into memory and return a RawData object if the file is recognized
     """
@@ -60,7 +60,7 @@ def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> RawData:
     fte_per_pay_period, fte_hours_paid = _parse_fte_stats(fte_stats_df)
     values.update(volume_values)
 
-    return RawData(
+    return SourceData(
         income_statement=income_statement,
         income_statements=[],
         revenue=revenue,

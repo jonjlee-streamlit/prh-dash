@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 from ...util import df_get_tables_by_columns, df_get_tables_by_rows, df_get_val_or_range
-from ...RawData import RawData
+from ...SourceData import SourceData
 
 KNOWN_RADS_DEPT_NUMBERS = [
     "CC_71200",
@@ -13,7 +13,7 @@ KNOWN_RADS_DEPT_NUMBERS = [
 ]
 
 
-def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> RawData:
+def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> SourceData:
     # Detect if incoming file is for this department
     if filename.endswith(".xlsx"):
         df = pd.read_excel(contents, sheet_name=0, header=None)
@@ -29,15 +29,15 @@ def parse(filename: str, contents: bytes, excel_sheets: list[str]) -> RawData:
 
     if income_stmt_file:
         # Entire sheet is income statement
-        return RawData(income_statements=[df])
+        return SourceData(income_statements=[df])
     elif volumes_file:
         # Historical volumes
         volumes = df_get_tables_by_columns(df, "6:14")
-        return RawData(rads_volumes=volumes)
+        return SourceData(rads_volumes=volumes)
     elif hours_file:
         # Extract tables of productive and non-productive hours
         hours_by_pay_period, hours_by_month = _parse_hours_file(contents)
-        return RawData(
+        return SourceData(
             hours_by_pay_period=hours_by_pay_period, hours_by_month=hours_by_month
         )
 

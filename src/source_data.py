@@ -1,71 +1,62 @@
 """
-Defines data classes that hold raw and processed source data
+Source data as in-memory copy of all DB tables as dataframes
 """
-import io
 import logging
 import pandas as pd
-import openpyxl as xl
 import streamlit as st
-from .RawData import RawData
-from . import dept
+from dataclasses import dataclass, field
+from datetime import datetime
+from sqlalchemy import create_engine, text as sql_text
+from sqlalchemy.orm import Session
+from .model import (
+    Metadata,
+    SourceMetadata,
+    Volume,
+    BudgetedHoursPerVolume,
+    HoursAndFTE,
+    IncomeStmt,
+)
 
-_PARSERS = [dept.therapy.parser, dept.rads.parser]
+
+@dataclass(eq=True, frozen=True)
+class SourceData:
+    """In-memory copy of DB tables"""
+
+    volume_df: pd.DataFrame = None
+    budgeted_hours_per_volume_df: pd.DataFrame = None
+    hours_and_fte_df: pd.DataFrame = None
+    income_stmt_df: pd.DataFrame = None
+
+    # Metadata
+    last_updated: datetime = None
+    sources_updated: dict = field(default_factory=dict)
 
 
 @st.cache_data(show_spinner=False)
-def extract_from(files: list[str]) -> RawData:
+def load_db(db_file: str) -> SourceData:
     """
-    Read and parse a list of source data files, including for example, Excel reports exported from Workday
+    Read all data from specified SQLite DB into memory and return as dataframes
     """
-    # Read all files
-    segments = []
-    for filename in files:
-        # Fetch and read file into memory
-        contents = _read_file(filename)
-        segment = _parse(filename, contents)
-        if segment is not None:
-            segments.append(segment)
+    logging.info("Reading DB tables")
+    engine = create_engine(f"sqlite:///{db_file}")
+    with Session(engine) as session:
+        # Read metadata
+        metadata = (
+            session.query(Metadata).order_by(Metadata.last_updated.desc()).first()
+        )
+        last_updated = metadata.last_updated if metadata is not None else None
+        sources_updated = {
+            row.filename: row.modified for row in session.query(SourceMetadata)
+        }
 
-    if len(segments) == 0:
-        return None
+        # Read dashboard data into dataframes
+    dfs = {
+        "volume_df": pd.read_sql_table(Volume.__tablename__, engine),
+        "budgeted_hours_per_volume_df": pd.read_sql_table(
+            BudgetedHoursPerVolume.__tablename__, engine
+        ),
+        "hours_and_fte_df": pd.read_sql_table(HoursAndFTE.__tablename__, engine),
+        "income_stmt_df": pd.read_sql_table(IncomeStmt.__tablename__, engine),
+    }
 
-    # Merge multiple files into one object if necessary
-    raw_data = RawData.merge(segments) if len(segments) > 1 else segments[0]
-    return raw_data
-
-
-def _read_file(filename: str) -> bytes:
-    """
-    Wrapper for reading a source data file, returning data as byte array.
-    In the future, will allow for fetching from URL and handling encrypted data.
-    """
-    logging.info(filename + " - fetching")
-    with open(filename, "rb") as f:
-        return f.read()
-
-
-def _parse(filename: str, contents: bytes) -> RawData:
-    """
-    Delegate to department specific parsers to detect file type and pull contents into memory
-    """
-    # Get list of worksheets if files is an excel spreadsheet
-    wb = None
-    excel_sheets = []
-    if filename.endswith(".xlsx"):
-        try:
-            wb = xl.load_workbook(io.BytesIO(contents), read_only=True, data_only=True)
-            excel_sheets = wb.sheetnames
-        except Exception as e:
-            logging.info(f"Could not read Excel file {filename}: {e}")
-        finally:
-            if wb is not None:
-                wb.close()
-
-    # Try each available parser until file type recognized
-    for p in _PARSERS:
-        raw_data = p.parse(filename, contents, excel_sheets)
-        if raw_data is not None:
-            return raw_data
-
-    logging.info(f"{filename} - skipping; no parser available.")
-    return None
+    return SourceData(last_updated=last_updated, sources_updated=sources_updated, **dfs)
