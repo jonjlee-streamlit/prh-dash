@@ -4,6 +4,7 @@ Transform source data into department specific data that can be displayed on das
 
 import pandas as pd
 from dataclasses import dataclass
+from .depts import DeptConfig
 from ...source_data import SourceData
 
 
@@ -26,7 +27,7 @@ class DeptData:
     stats: dict
 
 
-def process(settings: dict, src: SourceData) -> DeptData:
+def process(config: DeptConfig, settings: dict, src: SourceData) -> DeptData:
     """
     Receives raw source data from database.
     Partitions and computes statistics to be displayed by the app.

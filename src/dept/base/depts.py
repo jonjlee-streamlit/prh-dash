@@ -25,3 +25,10 @@ DEPT_CONFIG = {
         ],
     ),
 }
+
+
+def config_from_route(route_id: str):
+    """
+    Translate the ID given by route.route_by_query() to a department config that can be used with src.dept.base.data.process().
+    """
+    return DEPT_CONFIG.get(route_id, None)
