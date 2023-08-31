@@ -1,5 +1,5 @@
 import streamlit as st
-from src import auth, route, source_data
+from src import auth, route, source_data, dept
 
 
 def run():
@@ -25,6 +25,16 @@ def run():
     if src_data is None:
         return st.write("No data available. Please contact administrator.")
     if route_id == route.DEFAULT:
+        data = dept.base.process(
+            dept.base.DEPT_CONFIG[route.IMAGING],
+            {"dept": "ALL", "month": "2023-03", "payperiod": "2023-1"},
+            src_data,
+        )
+        st.write(data.hours)
+        st.write(data.hours_for_month)
+        st.write(data.hours_ytd)
+        st.write(data.volumes)
+        st.write(data.income_stmt)
         st.write(
             "Please contact your administrator for a department specific link to access your dashboard."
         )

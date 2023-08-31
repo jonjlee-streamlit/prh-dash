@@ -241,9 +241,42 @@ def read_income_stmt_data(files):
         month = datetime.strptime(month, "Month to Date: %m/%Y")
         month = month.strftime("%Y-%m")
 
-        # Drop the non-data rows and apply header row to column names
+        # Drop the non-data rows and rename columns
         income_stmt_df = xl_data.iloc[row_start:]
-        income_stmt_df = util.df_convert_first_row_to_column_names(income_stmt_df)
+        income_stmt_df = income_stmt_df.iloc[1:].reset_index(drop=True)
+        income_stmt_df.columns = [
+            "ledger_acct",
+            "Cost Center",
+            "spend_category",
+            "revenue_category",
+            "actual",
+            "budget",
+            "actual_ytd",
+            "budget_ytd",
+        ]
+
+        # Add a new column "dept_wd_id" converting the Cost Center to an ID. Drop rows without a known workday dept ID
+        # Reassign canonical dept names from workday ID into the dept_name column
+        income_stmt_df["dept_wd_id"] = (
+            income_stmt_df["Cost Center"]
+            .str.lower()
+            .map({k.lower(): v for k, v in ALIASES_TO_WDID.items()})
+        )
+        unrecognized = (
+            income_stmt_df[income_stmt_df["dept_wd_id"].isna()]
+            .loc[:, "Cost Center"]
+            .unique()
+        )
+        income_stmt_df.dropna(subset=["dept_wd_id"], inplace=True)
+        income_stmt_df["dept_name"] = income_stmt_df["dept_wd_id"].map(
+            WDID_TO_DEPT_NAME
+        )
+
+        # Log unrecognized cost centers that were dropped from data:
+        if len(unrecognized) > 0 and unrecognized[0] != "(Blank)":
+            logging.warn(
+                f"Dropping unknown cost centers from income statement: {unrecognized} in {file}"
+            )
 
         # Add the month as a column
         income_stmt_df["month"] = month
@@ -251,19 +284,23 @@ def read_income_stmt_data(files):
         # Replace all cells with "(Blank)" with actual nulls
         income_stmt_df = income_stmt_df.replace("(Blank)", None)
 
-        # Rename and reorder columns
-        income_stmt_df.columns = [
-            "ledger_acct",
-            "cost_center",
-            "spend_category",
-            "revenue_category",
-            "actual",
-            "budget",
-            "actual_ytd",
-            "budget_ytd",
-            "month",
-        ]
-        ret.append(income_stmt_df)
+        # Reorder and retain columns corresponding to DB table
+        ret.append(
+            income_stmt_df[
+                [
+                    "month",
+                    "ledger_acct",
+                    "dept_wd_id",
+                    "dept_name",
+                    "spend_category",
+                    "revenue_category",
+                    "actual",
+                    "budget",
+                    "actual_ytd",
+                    "budget_ytd",
+                ]
+            ]
+        )
 
     return pd.concat(ret)
 

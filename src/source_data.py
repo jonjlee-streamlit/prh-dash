@@ -28,7 +28,7 @@ DEFAULT_DB_FILE = os.path.join(
 class SourceData:
     """In-memory copy of DB tables"""
 
-    volume_df: pd.DataFrame = None
+    volumes_df: pd.DataFrame = None
     budgeted_hours_per_volume_df: pd.DataFrame = None
     hours_and_fte_df: pd.DataFrame = None
     income_stmt_df: pd.DataFrame = None
@@ -61,7 +61,7 @@ def from_db(db_file: str) -> SourceData:
 
     # Read dashboard data into dataframes
     dfs = {
-        "volume_df": pd.read_sql_table(Volume.__tablename__, engine),
+        "volumes_df": pd.read_sql_table(Volume.__tablename__, engine),
         "budgeted_hours_per_volume_df": pd.read_sql_table(
             BudgetedHoursPerVolume.__tablename__, engine
         ),

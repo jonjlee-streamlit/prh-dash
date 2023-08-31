@@ -149,15 +149,24 @@ DEFAULT_INCOME_STATEMENT_DEF = [
 def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
     # Create new column that combines Spend and Revenue Categories
     src_df = src_df.copy()
-    src_df["Category"] = src_df.apply(
-        lambda row: row["Spend Category"]
-        if row["Spend Category"] != "(Blank)"
-        else row["Revenue Category"],
+    src_df["category"] = src_df.apply(
+        lambda row: row["spend_category"]
+        if row["spend_category"] is not None
+        else row["revenue_category"],
         axis=1,
     )
 
     # Blank Income Statement dataframe
-    ret = pd.DataFrame(columns=["hier", "Ledger Account", "Actual", "Budget"])
+    ret = pd.DataFrame(
+        columns=[
+            "hier",
+            "Ledger Account",
+            "Actual",
+            "Budget",
+            "Actual as of ",
+            "Budget as of ",
+        ]
+    )
 
     def process_item(item, path):
         """
@@ -171,12 +180,7 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
         if "name" in item and "items" in item:
             # A header row, like Revenue. Update the path, and recurse into child items
             cur_path = item["name"] if path == "" else f"{path}|{item['name']}"
-            ret.loc[len(ret)] = [
-                cur_path,
-                item["name"],
-                None,
-                None,
-            ]
+            ret.loc[len(ret)] = [cur_path, item["name"], None, None, None, None]
             for sub_item in item["items"]:
                 process_item(sub_item, cur_path)
 
@@ -191,11 +195,13 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 cur_path = f"{account}" if path == "" else f"{path}|{account}"
 
                 # Add a header row
-                ret.loc[len(ret)] = [cur_path, account, None, None]
+                ret.loc[len(ret)] = [cur_path, account, None, None, None, None]
 
                 # Get list of categories, and recursively add data
                 unique_categories = set(
-                    src_df.loc[src_df["Ledger Account"] == account, "Category"].unique()
+                    src_df.loc[src_df["ledger_acct"] == account, "category"]
+                    .fillna("")
+                    .unique()
                 )
                 for cat in sorted(unique_categories):
                     process_item({"account": account, "category": cat}, cur_path)
@@ -206,10 +212,13 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 cur_path = cur_path if path == "" else f"{path}|{cur_path}"
 
                 # Filter data by Ledger Account and Category if specified
-                mask = src_df["Ledger Account"] == account
+                mask = src_df["ledger_acct"] == account
                 if category:
-                    mask &= src_df["Category"] == category
-                rows = src_df.loc[mask, ["Ledger Account", "Actual", "Budget"]]
+                    mask &= src_df["category"] == category
+                rows = src_df.loc[
+                    mask,
+                    ["ledger_acct", "actual", "budget", "actual_ytd", "budget_ytd"],
+                ]
 
                 # If "negative" is defined, make value negative
                 multiplier = -1 if neg else 1
@@ -218,9 +227,11 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 for _, row in rows.iterrows():
                     ret.loc[len(ret)] = [
                         cur_path,
-                        category if category else row["Ledger Account"],
-                        multiplier * row["Actual"],
-                        multiplier * row["Budget"],
+                        category if category else row["ledger_acct"],
+                        multiplier * row["actual"],
+                        multiplier * row["budget"],
+                        multiplier * row["actual_ytd"],
+                        multiplier * row["budget_ytd"],
                     ]
 
         if "total" in item:
@@ -229,6 +240,8 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
             paths_to_sum = item["total"]
             actual = 0
             budget = 0
+            actual_ytd = 0
+            budget_ytd = 0
             for prefix in paths_to_sum:
                 # Replace '/' with our actual path delimiter
                 prefix = prefix.replace("/", "|")
@@ -238,10 +251,26 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 # Total matching rows
                 actual_sum = ret.loc[ret["hier"].str.startswith(prefix), "Actual"].sum()
                 budget_sum = ret.loc[ret["hier"].str.startswith(prefix), "Budget"].sum()
+                actual_ytd_sum = ret.loc[
+                    ret["hier"].str.startswith(prefix), "Actual as of "
+                ].sum()
+                budget_ytd_sum = ret.loc[
+                    ret["hier"].str.startswith(prefix), "Budget as of "
+                ].sum()
                 # Add or substract to final total
                 actual += (-1 if neg else 1) * actual_sum
                 budget += (-1 if neg else 1) * budget_sum
-            ret.loc[len(ret)] = [cur_path, item["name"], actual, budget]
+                actual_ytd += (-1 if neg else 1) * actual_ytd_sum
+                budget_ytd += (-1 if neg else 1) * budget_ytd_sum
+
+            ret.loc[len(ret)] = [
+                cur_path,
+                item["name"],
+                actual,
+                budget,
+                actual_ytd,
+                budget_ytd,
+            ]
 
     # Return a dataframe using the given income statement definition
     for item in statement_def:
