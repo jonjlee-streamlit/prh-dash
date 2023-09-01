@@ -151,22 +151,22 @@ def df_get_table(
     col_start_idx = col_start_idx - 1
 
     # Determine columns range of table by finding the first empty cell by column
-    col_end_idx = df.shape[1]
+    col_end = df.shape[1]
     for col in range(col_start_idx, df.shape[1]):
         if pd.isna(df.iloc[row_start_idx, col]):
-            col_end_idx = col - 1
+            col_end = col
             break
 
     # Determine row range of table by finding the empty row across all columns
-    row_end_idx = df.shape[0]
+    row_end = df.shape[0]
     for row in range(row_start_idx, df.shape[0]):
-        row_data = df.iloc[row, col_start_idx:col_end_idx]
+        row_data = df.iloc[row, col_start_idx:col_end]
         if row_data.isnull().all():
-            row_end_idx = row - 1
+            row_end = row
             break
 
-    # Extract table
-    table = df.iloc[row_start_idx:row_end_idx, col_start_idx:col_end_idx]
+    # Extract table. Note, iloc() is exclusive of the end index.
+    table = df.iloc[row_start_idx:row_end, col_start_idx:col_end]
 
     # Use first row as column names if indicated
     if has_header_row:
