@@ -16,7 +16,7 @@ class DeptData:
     # Settings
     dept: str
     month: str
-    payperiod: str
+    pay_period: str
 
     # Patient volumes from stats report card
     volumes: pd.DataFrame
@@ -41,7 +41,11 @@ def process(config: DeptConfig, settings: dict, src: SourceData) -> DeptData:
     Partitions and computes statistics to be displayed by the app.
     settings contains any configuration from the sidebar that the user selects.
     """
-    dept, month, payperiod = settings["dept"], settings["month"], settings["payperiod"]
+    dept, month, pay_period = (
+        settings["dept"],
+        settings["month"],
+        settings["pay_period"],
+    )
 
     # Get department IDs that we will be matching
     if dept == "ALL":
@@ -58,28 +62,16 @@ def process(config: DeptConfig, settings: dict, src: SourceData) -> DeptData:
     income_stmt = _calc_income_stmt_for_month(income_stmt_df, month)
 
     # Create summary tables for hours worked by month and year
-    hours_and_fte_df = src.hours_and_fte_df[
-        src.hours_and_fte_df["dept_wd_id"].isin(wd_ids)
-    ]
-    hours_for_month = _calc_hours_for_payperiod(hours_and_fte_df, payperiod)
-    hours_ytd = _calc_hours_ytd(hours_and_fte_df)
-
-    # There is one budgeted hours per volume is a single number for the department
-    budgeted_hours_per_volume_df = src.budgeted_hours_per_volume_df[
-        src.budgeted_hours_per_volume_df["dept_wd_id"].isin(wd_ids)
-    ]
-    budgeted_hours_per_volume = (
-        budgeted_hours_per_volume_df["budgeted_hours_per_volume"].sum()
-        if budgeted_hours_per_volume_df.shape[0] > 0
-        else 0
-    )
+    hours_df = src.hours_df[src.hours_df["dept_wd_id"].isin(wd_ids)]
+    hours_for_month = _calc_hours_for_payperiod(hours_df, pay_period)
+    hours_ytd = _calc_hours_ytd(hours_df)
 
     return DeptData(
         dept=wd_ids,
         month=month,
-        payperiod=payperiod,
+        pay_period=pay_period,
         volumes=volumes,
-        hours=hours_and_fte_df,
+        hours=hours_df,
         hours_for_month=hours_for_month,
         hours_ytd=hours_ytd,
         income_stmt=income_stmt,
@@ -87,14 +79,13 @@ def process(config: DeptConfig, settings: dict, src: SourceData) -> DeptData:
     )
 
 
-def _calc_hours_for_payperiod(df: pd.DataFrame, payperiod: str) -> pd.DataFrame:
-    # Get year and pay period number from the string format: "2023-1"
-    [year, pay_period] = [int(x) for x in payperiod.split("-")]
-
+def _calc_hours_for_payperiod(df: pd.DataFrame, pay_period: str) -> pd.DataFrame:
+    """
+    Given a pay period, summarize the regular, overtime, productive/non-productive hours and total FTE
+    payperiod should be in the format YYYY-##, where ## is between 01 and 26
+    """
     # Find the row that matches our pay period
-    df = df[(df["year"] == year) & (df["pay_period"] == pay_period)].reset_index(
-        drop=True
-    )
+    df = df[df["pay_period"] == pay_period].reset_index(drop=True)
 
     # Return the columns that are displayed in the FTE tab summary table
     columns = [
@@ -112,10 +103,9 @@ def _calc_hours_for_payperiod(df: pd.DataFrame, payperiod: str) -> pd.DataFrame:
 
 
 def _calc_hours_ytd(df: pd.DataFrame) -> pd.DataFrame:
-    # Filter all rows for the current years
-    year = date.today().year
-    df = df[df["year"] == year]
-    data = None
+    # Filter all rows for the current year
+    year = str(date.today().year)
+    df = df[df["pay_period"].str.startswith(year)]
 
     # Sum all rows. Return columns that are displayed in the FTE tab summary table.
     columns = [

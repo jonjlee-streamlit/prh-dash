@@ -13,8 +13,8 @@ from .model import (
     Metadata,
     SourceMetadata,
     Volume,
-    BudgetedHoursPerVolume,
-    HoursAndFTE,
+    Budget,
+    Hours,
     IncomeStmt,
 )
 
@@ -29,8 +29,8 @@ class SourceData:
     """In-memory copy of DB tables"""
 
     volumes_df: pd.DataFrame = None
-    budgeted_hours_per_volume_df: pd.DataFrame = None
-    hours_and_fte_df: pd.DataFrame = None
+    budget_df: pd.DataFrame = None
+    hours_df: pd.DataFrame = None
     income_stmt_df: pd.DataFrame = None
 
     # Metadata
@@ -62,10 +62,8 @@ def from_db(db_file: str) -> SourceData:
     # Read dashboard data into dataframes
     dfs = {
         "volumes_df": pd.read_sql_table(Volume.__tablename__, engine),
-        "budgeted_hours_per_volume_df": pd.read_sql_table(
-            BudgetedHoursPerVolume.__tablename__, engine
-        ),
-        "hours_and_fte_df": pd.read_sql_table(HoursAndFTE.__tablename__, engine),
+        "budget_df": pd.read_sql_table(Budget.__tablename__, engine),
+        "hours_df": pd.read_sql_table(Hours.__tablename__, engine),
         "income_stmt_df": pd.read_sql_table(IncomeStmt.__tablename__, engine),
     }
 

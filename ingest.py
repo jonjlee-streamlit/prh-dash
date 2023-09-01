@@ -11,8 +11,8 @@ from src.model import (
     Metadata,
     SourceMetadata,
     Volume,
-    BudgetedHoursPerVolume,
-    HoursAndFTE,
+    Budget,
+    Hours,
     IncomeStmt,
 )
 from src.source_data import DEFAULT_DB_FILE
@@ -32,11 +32,7 @@ BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 # Historical volume data is in the STATS worksheet of the Dashboard Supporting Data spreadsheet
 VOLUMES_FILE = os.path.join(BASE_PATH, "Dashboard Supporting Data.xlsx")
 VOLUMES_SHEET = "STATS"
-
-BUDGETED_HOURS_FILE = os.path.join(
-    BASE_PATH, "Productive Hours per Encounter 2023.xlsx"
-)
-BUDGETED_HOURS_SHEET = "Summary"
+VOLUMES_BUDGET_SHEET = "Data"
 
 # The Natural Class subdir contains income statment in one Excel file per month, eg,
 # ./Natural Class/2022/(01) Jan 2022 Natural Class.xlsx
@@ -95,10 +91,6 @@ def sanity_check_data_dir():
         error = f"ERROR: data directory path does not exist: {BASE_PATH}"
     if not os.path.isfile(VOLUMES_FILE):
         error = f"ERROR: volumes data file is missing: {VOLUMES_FILE}"
-    if not os.path.isfile(BUDGETED_HOURS_FILE):
-        error = (
-            f"ERROR: productive hours summary file is missing: {BUDGETED_HOURS_FILE}"
-        )
     if (
         not os.path.isdir(INCOME_STMT_PATH)
         or len(find_data_files(INCOME_STMT_PATH)) == 0
@@ -145,7 +137,7 @@ def read_volume_data(filename, sheet):
     Read the Excel sheet with volume data into a dataframe
     """
     # Read tables from excel worksheet
-    logging.info(f"Reading {filename}")
+    logging.info(f"Reading {filename}, {sheet}")
     xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
     volumes_by_year = util.df_get_tables_by_columns(xl_data, "1:68")
 
@@ -184,36 +176,39 @@ def read_volume_data(filename, sheet):
     return pd.DataFrame(data, columns=["dept_wd_id", "dept_name", "month", "volume"])
 
 
-def read_budgeted_hours_data(filename, sheet):
+def read_budget_data(filename, sheet):
     """
-    Read the Excel sheet with volume data into a dataframe
+    Read the sheet from the Dashboard Supporting Data Excel workbook with budgeted hours and volume data into a dataframe
     """
-    # Extract table from Productive Hours per Encounter -> Summary worksheet. Pull Department and Suggested columns
-    logging.info(f"Reading {filename}")
+    # Extract table and assign column names that match DB schema for columns we will retain
+    logging.info(f"Reading {filename}, {sheet}")
     xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
-    hrs_per_encounter_df = util.df_get_table(xl_data, "B2", has_header_row=True)
+    budget_df = util.df_get_table(xl_data, "B7", has_header_row=False)
+    budget_df.columns = [
+        "dept_wd_id",
+        "dept_name",
+        "budget_fte",
+        "budget_hrs",
+        "% Productive",
+        "Prod Hours",
+        "budget_volume",
+        "budget_hrs_per_volume",
+    ]
 
     # Transform
     # ---------
-    # Rename columns to match DB
-    hrs_per_encounter_df.rename(
-        columns={"Department": "dept_name", "Suggested": "budgeted_hours_per_volume"},
-        inplace=True,
-    )
-    # Add a new column "dept_wd_id" using dict, and drop rows without a known workday dept ID
-    hrs_per_encounter_df["dept_wd_id"] = (
-        hrs_per_encounter_df["dept_name"]
-        .str.lower()
-        .map({k.lower(): v for k, v in ALIASES_TO_WDID.items()})
-    )
-    hrs_per_encounter_df.dropna(subset=["dept_wd_id"], inplace=True)
-    # Reassign canonical dept names from workday ID using dict
-    hrs_per_encounter_df["dept_name"] = hrs_per_encounter_df["dept_wd_id"].map(
-        WDID_TO_DEPT_NAME
-    )
+    # Drop columns without an Workday ID
+    budget_df.dropna(subset=["dept_wd_id"], inplace=True)
 
-    return hrs_per_encounter_df[
-        ["dept_wd_id", "dept_name", "budgeted_hours_per_volume"]
+    return budget_df[
+        [
+            "dept_wd_id",
+            "dept_name",
+            "budget_fte",
+            "budget_hrs",
+            "budget_volume",
+            "budget_hrs_per_volume",
+        ]
     ]
 
 
@@ -345,9 +340,9 @@ def read_historical_hours_and_fte_data(filename):
             "total_fte",
         ]
 
-        # Add the year and pay period number as a column
-        hours_df["year"] = HISTORICAL_HOURS_YEAR
-        hours_df["pay_period"] = xl_data.iloc[row_start + 1, 0]
+        # Add the pay period number in the format YYYY-##
+        pp_num = xl_data.at[row_start + 1, 0]
+        hours_df["pay_period"] = f"{HISTORICAL_HOURS_YEAR}-{pp_num:02d}"
 
         # Transform
         # ---------
@@ -372,7 +367,6 @@ def read_historical_hours_and_fte_data(filename):
         ret.append(
             hours_df[
                 [
-                    "year",
                     "pay_period",
                     "dept_wd_id",
                     "dept_name",
@@ -415,8 +409,9 @@ def read_hours_and_fte_data(files):
 
         # Read year and pay period number from file name
         year_pp_num = re.search(r"PP#(\d+) (\d+) ", file, re.IGNORECASE)
-        hours_df["year"] = year_pp_num.group(2)
-        hours_df["pay_period"] = year_pp_num.group(1)
+        year = year_pp_num.group(2)
+        pp_num = int(year_pp_num.group(1))
+        hours_df["pay_period"] = f"{year}-{pp_num:02d}"
 
         # Transform
         # ---------
@@ -451,7 +446,6 @@ def read_hours_and_fte_data(files):
         ret.append(
             hours_df[
                 [
-                    "year",
                     "pay_period",
                     "dept_wd_id",
                     "dept_name",
@@ -502,15 +496,12 @@ if __name__ == "__main__":
     income_stmt_files = find_data_files(INCOME_STMT_PATH)
     hours_files = find_data_files(HOURS_PATH, exclude=[HISTORICAL_HOURS_FILE])
     source_files = (
-        [VOLUMES_FILE, BUDGETED_HOURS_FILE, HISTORICAL_HOURS_FILE]
-        + income_stmt_files
-        + hours_files
+        [VOLUMES_FILE, HISTORICAL_HOURS_FILE] + income_stmt_files + hours_files
     )
     logging.info(f"Discovered source files: {source_files}")
 
     # TODO: data verification
     # - VOLUMES_FILE, List worksheet: verify same data as static_data.WDID_TO_DEPTNAME
-    # - BUDGETED_HOURS_FILE, Summary worksheet: verify Department and Suggested columns present
     # - Each income statement sheet has Ledger Account cell, and data in columns A:Q
 
     # Create the empty temporary database file
@@ -522,9 +513,7 @@ if __name__ == "__main__":
 
     # Extract and perform basic transformation of data from spreadsheets
     volumes_df = read_volume_data(VOLUMES_FILE, VOLUMES_SHEET)
-    budgeted_hours_df = read_budgeted_hours_data(
-        BUDGETED_HOURS_FILE, BUDGETED_HOURS_SHEET
-    )
+    budget_df = read_budget_data(VOLUMES_FILE, VOLUMES_BUDGET_SHEET)
     income_stmt_df = read_income_stmt_data(income_stmt_files)
     historical_hours_df = read_historical_hours_and_fte_data(HISTORICAL_HOURS_FILE)
     hours_df = read_hours_and_fte_data(hours_files)
@@ -533,8 +522,8 @@ if __name__ == "__main__":
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(db) as session:
         clear_table_and_insert_data(session, Volume, volumes_df)
-        clear_table_and_insert_data(session, BudgetedHoursPerVolume, budgeted_hours_df)
-        clear_table_and_insert_data(session, HoursAndFTE, hours_df)
+        clear_table_and_insert_data(session, Budget, budget_df)
+        clear_table_and_insert_data(session, Hours, hours_df)
         clear_table_and_insert_data(session, IncomeStmt, income_stmt_df)
 
     # Update last ingest time and modified times for source data files

@@ -27,7 +27,7 @@ def run():
     if route_id == route.DEFAULT:
         data = dept.base.process(
             dept.base.DEPT_CONFIG[route.IMAGING],
-            {"dept": "ALL", "month": "2023-03", "payperiod": "2023-1"},
+            {"dept": "ALL", "month": "2023-03", "pay_period": "2023-01"},
             src_data,
         )
         st.write(data.hours)

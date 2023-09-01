@@ -163,8 +163,8 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
             "Ledger Account",
             "Actual",
             "Budget",
-            "Actual as of ",
-            "Budget as of ",
+            "YTD Actual",
+            "YTD Budget",
         ]
     )
 
@@ -252,10 +252,10 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 actual_sum = ret.loc[ret["hier"].str.startswith(prefix), "Actual"].sum()
                 budget_sum = ret.loc[ret["hier"].str.startswith(prefix), "Budget"].sum()
                 actual_ytd_sum = ret.loc[
-                    ret["hier"].str.startswith(prefix), "Actual as of "
+                    ret["hier"].str.startswith(prefix), "YTD Actual"
                 ].sum()
                 budget_ytd_sum = ret.loc[
-                    ret["hier"].str.startswith(prefix), "Budget as of "
+                    ret["hier"].str.startswith(prefix), "YTD Budget"
                 ].sum()
                 # Add or substract to final total
                 actual += (-1 if neg else 1) * actual_sum

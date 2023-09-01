@@ -27,19 +27,21 @@ class Volume(Base):
     volume = mapped_column(Integer, nullable=False)
 
 
-class BudgetedHoursPerVolume(Base):
-    __tablename__ = "budgeted_hours_per_volume"
+class Budget(Base):
+    __tablename__ = "budget"
     id = mapped_column(Integer, primary_key=True)
     dept_wd_id = mapped_column(String(10), nullable=False)
     dept_name = mapped_column(String, nullable=True)
-    budgeted_hours_per_volume = mapped_column(Float, nullable=False)
+    budget_fte = mapped_column(Integer, nullable=False)
+    budget_hrs = mapped_column(Integer, nullable=False)
+    budget_volume = mapped_column(Integer, nullable=False)
+    budget_hrs_per_volume = mapped_column(Float, nullable=False)
 
 
-class HoursAndFTE(Base):
-    __tablename__ = "hours_fte"
+class Hours(Base):
+    __tablename__ = "hours"
     id = mapped_column(Integer, primary_key=True)
-    year = mapped_column(Integer, nullable=False)
-    pay_period = mapped_column(Integer, nullable=False)
+    pay_period = mapped_column(String(7), nullable=False)
     dept_wd_id = mapped_column(String(10), nullable=False)
     dept_name = mapped_column(String, nullable=True)
     reg_hrs = mapped_column(Float, nullable=False)
