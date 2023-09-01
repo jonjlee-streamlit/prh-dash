@@ -106,7 +106,7 @@ def _calc_hours_for_payperiod(df: pd.DataFrame, payperiod: str) -> pd.DataFrame:
         "total_fte",
     ]
     if df.shape[0] > 0:
-        return df.loc[0, columns]
+        return df.loc[:, columns].sum()
     else:
         return pd.DataFrame(columns=columns)
 
