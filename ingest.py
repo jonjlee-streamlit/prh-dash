@@ -505,7 +505,8 @@ if __name__ == "__main__":
     source_files = (
         [VOLUMES_FILE, HISTORICAL_HOURS_FILE] + income_stmt_files + hours_files
     )
-    logging.info(f"Discovered source files: {source_files}")
+    source_files_str = '\n  '.join(source_files)
+    logging.info(f"Discovered source files:\n  {source_files_str}")
 
     # TODO: data verification
     # - VOLUMES_FILE, List worksheet: verify same data as static_data.WDID_TO_DEPTNAME
