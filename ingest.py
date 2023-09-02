@@ -183,7 +183,10 @@ def read_budget_data(filename, sheet):
     # Extract table and assign column names that match DB schema for columns we will retain
     logging.info(f"Reading {filename}, {sheet}")
     xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
-    budget_df = util.df_get_table(xl_data, "B7", has_header_row=False)
+    budget_df = util.df_get_tables_by_rows(
+        xl_data, cols="B:L", start_row_idx=6, limit=1
+    )
+    budget_df = budget_df[0]
     budget_df.columns = [
         "dept_wd_id",
         "dept_name",
@@ -193,6 +196,9 @@ def read_budget_data(filename, sheet):
         "Prod Hours",
         "budget_volume",
         "budget_hrs_per_volume",
+        "",
+        "hourly_rate",
+        "Current YTD FTE",
     ]
 
     # Transform
@@ -208,6 +214,7 @@ def read_budget_data(filename, sheet):
             "budget_hrs",
             "budget_volume",
             "budget_hrs_per_volume",
+            "hourly_rate",
         ]
     ]
 
@@ -276,8 +283,8 @@ def read_income_stmt_data(files):
         # Add the month as a column
         income_stmt_df["month"] = month
 
-        # Replace all cells with "(Blank)" with actual nulls
-        income_stmt_df = income_stmt_df.replace("(Blank)", None)
+        # Replace all cells with "(Blank)" with actual empty string
+        income_stmt_df = income_stmt_df.replace("(Blank)", "")
 
         # Reorder and retain columns corresponding to DB table
         ret.append(

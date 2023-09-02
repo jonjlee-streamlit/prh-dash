@@ -1,3 +1,4 @@
+from . import figs
 from ... import source_data
 from .depts import DeptConfig, DEPT_CONFIG
 from .data import DeptData, process

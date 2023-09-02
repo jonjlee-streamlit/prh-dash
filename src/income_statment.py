@@ -44,6 +44,10 @@ DEFAULT_INCOME_STATEMENT_DEF = [
                         "category": "Misc Revenue",
                         "negative": True,
                     },
+                    {
+                        "account": "40301:Gain/Loss on Sale",
+                        "negative": True,
+                    },
                 ],
             },
         ],
@@ -54,6 +58,7 @@ DEFAULT_INCOME_STATEMENT_DEF = [
             {"account": "49000:Contractual Adjustments"},
             {"account": "49001:Bad Debts & Write Offs"},
             {"account": "49002:Administrative Write Offs"},
+            {"account": "49003:Employee Discount"},
         ],
     },
     {"name": "Net Revenue", "total": ["Operating Revenues", "-Deductions"]},
@@ -76,10 +81,7 @@ DEFAULT_INCOME_STATEMENT_DEF = [
             {
                 "name": "Professional Fees",
                 "items": [
-                    {
-                        "account": "60220:Professional Fees",
-                        "category": "Professional Fees",
-                    },
+                    {"account": "60220:Professional Fees", "category": "*"},
                     {"account": "60221:Temp Labor", "category": "*"},
                     {"account": "60222:Locum Tenens", "category": "*"},
                 ],
@@ -89,6 +91,7 @@ DEFAULT_INCOME_STATEMENT_DEF = [
                 "items": [
                     {"account": "60300:Supplies", "category": "*"},
                     {"account": "60301:Inventory Adjustments", "category": "*"},
+                    {"account": "60302:Expired Wasted Supplies", "category": "*"},
                     {"account": "60336:Pharmaceuticals", "category": "*"},
                 ],
             },
@@ -103,7 +106,13 @@ DEFAULT_INCOME_STATEMENT_DEF = [
                 "items": [
                     {"account": "60600:Purchased Services", "category": "*"},
                     {"account": "60620:Maintenance", "category": "*"},
-                    {"account": "60650:Software Licenses"},
+                    {"account": "60650:Software Licenses", "category": "*"},
+                ],
+            },
+            {
+                "name": "Depreciation",
+                "items": [
+                    {"account": "70000:Depreciation", "category": "*"},
                 ],
             },
             {
@@ -115,12 +124,18 @@ DEFAULT_INCOME_STATEMENT_DEF = [
             {
                 "name": "Insurance",
                 "items": [
-                    {"account": "50012:Benefits-Insurance", "category": "*"},
+                    {"account": "60900:Insurance-Professional", "category": "*"},
+                    {"account": "60901:Insurance-Other", "category": "*"},
                 ],
             },
             {
                 "name": "Licenses & Taxes",
-                "items": [],
+                "items": [
+                    {"account": "61000:Taxes-Hospital B&O", "category": "*"},
+                    {"account": "61001:Taxes-Sales and Use", "category": "*"},
+                    {"account": "61002:Taxes-Property", "category": "*"},
+                    {"account": "61003:Licensing Fees State", "category": "*"},
+                ],
             },
             {
                 "name": "Other Direct Expenses",
@@ -131,9 +146,12 @@ DEFAULT_INCOME_STATEMENT_DEF = [
                 ],
             },
             {
-                "name": "Depreciation",
+                "name": "Interest/Amortization/Fees",
                 "items": [
-                    {"account": "70000:Depreciation"},
+                    {
+                        "account": "80000:Interest/Bond Amortz/Trustee Fees",
+                        "category": "*",
+                    },
                 ],
             },
         ],
@@ -151,7 +169,7 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
     src_df = src_df.copy()
     src_df["category"] = src_df.apply(
         lambda row: row["spend_category"]
-        if row["spend_category"] is not None
+        if row["spend_category"] != ""
         else row["revenue_category"],
         axis=1,
     )
@@ -208,12 +226,12 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
             else:
                 # For a specific account / category, update the current path and add all
                 # matching rows from the source data.
-                cur_path = f"{account}-{category}" if category else account
+                cur_path = f"{account}-{category}" if category is not None else account
                 cur_path = cur_path if path == "" else f"{path}|{cur_path}"
 
                 # Filter data by Ledger Account and Category if specified
                 mask = src_df["ledger_acct"] == account
-                if category:
+                if category is not None:
                     mask &= src_df["category"] == category
                 rows = src_df.loc[
                     mask,
@@ -223,11 +241,21 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 # If "negative" is defined, make value negative
                 multiplier = -1 if neg else 1
 
+                # The text to display in the "Ledger Account" column should be the spend or revenue category
+                # if specified, other default to the overall ledger account. If category is specified and blank,
+                # make it more explicit by mapping it to the string "(Blank)"
+                if category is None:
+                    account_text = account
+                elif category == "":
+                    account_text = "(Blank)"
+                else:
+                    account_text = category
+
                 # Add each matching row into the income statement
                 for _, row in rows.iterrows():
                     ret.loc[len(ret)] = [
                         cur_path,
-                        category if category else row["ledger_acct"],
+                        account_text,
                         multiplier * row["actual"],
                         multiplier * row["budget"],
                         multiplier * row["actual_ytd"],

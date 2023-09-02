@@ -25,16 +25,18 @@ def run():
     if src_data is None:
         return st.write("No data available. Please contact administrator.")
     if route_id == route.DEFAULT:
+        month = "2023-07"
         data = dept.base.process(
             dept.base.DEPT_CONFIG[route.IMAGING],
-            {"dept": "ALL", "month": "2023-03", "pay_period": "2023-01"},
+            {"dept": "ALL", "month": month, "pay_period": "2023-01"},
             src_data,
         )
         st.write(data.hours)
         st.write(data.hours_for_month)
         st.write(data.hours_ytd)
         st.write(data.volumes)
-        st.write(data.income_stmt)
+        dept.base.figs.aggrid_income_stmt(data.income_stmt, month)
+        st.write(data.stats)
         st.write(
             "Please contact your administrator for a department specific link to access your dashboard."
         )
