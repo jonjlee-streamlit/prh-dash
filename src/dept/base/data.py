@@ -163,9 +163,6 @@ def _calc_stats(
             "hourly_rate",
         ]
     ].sum()
-    ytd_budget_df = budget_df * ((date.today().month - 1) / 12)
-    ytd_budget_volume = ytd_budget_df.at["budget_volume"]
-    hourly_rate = ytd_budget_df.at["hourly_rate"]
 
     # Hours data - table has one row per department with columns for types of hours,
     # eg. productive, non-productive, overtime, ...
@@ -193,6 +190,15 @@ def _calc_stats(
     ytd_expense = df_expense.iloc[0, -2]
     ytd_budget_expense = df_expense.iloc[0, -1]
 
+    # Get the YTD budgeted volume based on the proportion of the annual budgeted volume
+    # for the number of months of the year for which we have revenue / income statement information
+    [income_stmt_max_year, income_stmt_max_month] = income_stmt_df["month"].max().split("-")
+    if income_stmt_max_year == cur_year:
+        ytd_budget_volume = budget_df.at["budget_volume"] * (int(income_stmt_max_month) / 12)
+    else:
+        # No revenue data for current year yet, YTD budgets are all 0
+        ytd_budget_volume = 0
+
     # Volumes for the selected month and YTD show up on the Volumes tab, Summary section
     s["month_volume"] = month_volume
     s["ytd_volume"] = ytd_volume
@@ -219,7 +225,7 @@ def _calc_stats(
         s["target_expense_per_volume"] = 0
         s["variance_expense_per_volume"] = 0
 
-    s["hours_per_volume"] = ytd_hours / ytd_volume
+    s["hours_per_volume"] = ytd_prod_hours / ytd_volume
     s["target_hours_per_volume"] = budget_df.at["budget_hrs_per_volume"]
     s["variance_hours_per_volume"] = (
         s["target_hours_per_volume"] - s["hours_per_volume"]
@@ -229,7 +235,7 @@ def _calc_stats(
             static_data.FTE_HOURS_PER_YEAR * (ytd_prod_hours / ytd_hours)
         )
         s["fte_variance_dollars"] = (
-            s["variance_hours_per_volume"] * ytd_volume * hourly_rate
+            s["variance_hours_per_volume"] * ytd_volume * budget_df.at["hourly_rate"]
         )
     else:
         s["fte_variance"] = 0
