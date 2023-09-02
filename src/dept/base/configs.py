@@ -12,7 +12,7 @@ class DeptConfig:
 
 
 DEPT_CONFIG = {
-    route.ACUPUNCTURE: DeptConfig("Acupunture", ["CC_72045"]),
+    route.ACUPUNCTURE: DeptConfig("Acupuncture", ["CC_72045"]),
     route.IMAGING: DeptConfig(
         "Imaging",
         [

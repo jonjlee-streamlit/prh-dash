@@ -39,17 +39,17 @@ def process(config: DeptConfig, settings: dict, src: source_data.SourceData) -> 
     Partitions and computes statistics to be displayed by the app.
     settings contains any configuration from the sidebar that the user selects.
     """
-    dept, month, pay_period = (
-        settings["dept"],
+    dept_id, month, pay_period = (
+        settings["dept_id"],
         settings["month"],
         settings.get("pay_period", "2023-01"),
     )
 
     # Get department IDs that we will be matching
-    if dept == "All":
+    if dept_id == "All":
         wd_ids = config.wd_ids
     else:
-        wd_ids = [dept]
+        wd_ids = [dept_id]
 
     # Sort volume data by time
     volumes_df = src.volumes_df[src.volumes_df["dept_wd_id"].isin(wd_ids)]
@@ -163,7 +163,7 @@ def _calc_stats(
             "hourly_rate",
         ]
     ].sum()
-    ytd_budget_df = budget_df * (date.today().month / 12)
+    ytd_budget_df = budget_df * ((date.today().month - 1) / 12)
     ytd_budget_volume = ytd_budget_df.at["budget_volume"]
     hourly_rate = ytd_budget_df.at["hourly_rate"]
 
