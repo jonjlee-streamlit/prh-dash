@@ -5,10 +5,8 @@ Transform source data into department specific data that can be displayed on das
 import pandas as pd
 from dataclasses import dataclass
 from datetime import date
-from .depts import DeptConfig
-from ...source_data import SourceData
-from ...income_statment import generate_income_stmt
-from ...static_data import FTE_HOURS_PER_YEAR
+from .configs import DeptConfig
+from ... import source_data, income_statment, static_data
 
 
 @dataclass(frozen=True)
@@ -35,7 +33,7 @@ class DeptData:
     stats: dict
 
 
-def process(config: DeptConfig, settings: dict, src: SourceData) -> DeptData:
+def process(config: DeptConfig, settings: dict, src: source_data.SourceData) -> DeptData:
     """
     Receives raw source data from database.
     Partitions and computes statistics to be displayed by the app.
@@ -44,11 +42,11 @@ def process(config: DeptConfig, settings: dict, src: SourceData) -> DeptData:
     dept, month, pay_period = (
         settings["dept"],
         settings["month"],
-        settings["pay_period"],
+        settings.get("pay_period", "2023-01"),
     )
 
     # Get department IDs that we will be matching
-    if dept == "ALL":
+    if dept == "All":
         wd_ids = config.wd_ids
     else:
         wd_ids = [dept]
@@ -132,14 +130,14 @@ def _calc_hours_ytd(df: pd.DataFrame) -> pd.DataFrame:
 def _calc_income_stmt_for_month(stmt: pd.DataFrame, month: str) -> pd.DataFrame:
     # Filter data for given month
     stmt = stmt[stmt["month"] == month]
-    ret = generate_income_stmt(stmt)
+    ret = income_statment.generate_income_stmt(stmt)
     return ret
 
 
 def _calc_stats(
     wd_ids: list,
     settings: dict,
-    src: SourceData,
+    src: source_data.SourceData,
     volumes: pd.DataFrame,  # volumes for each sub-department, all months
     hours_ytd: pd.DataFrame,  # one row with total hours for all sub-departments
     income_stmt_df: pd.DataFrame,  # all income statment data for sub-departments, all months
@@ -184,7 +182,7 @@ def _calc_stats(
     latest_income_stmt_df = income_stmt_df[
         income_stmt_df["month"] == income_stmt_df["month"].max()
     ]
-    income_stmt_ytd = generate_income_stmt(latest_income_stmt_df)
+    income_stmt_ytd = income_statment.generate_income_stmt(latest_income_stmt_df)
     # Pull the YTD Actual and YTD Budget totals for revenue and expenses
     # Those columns can change names, so index them as the second to last, or -2 column (YTD Actual),
     # and last, or -1 column (YTD Budget)
@@ -228,7 +226,7 @@ def _calc_stats(
     )
     if ytd_hours:
         s["fte_variance"] = (s["variance_hours_per_volume"] * ytd_volume) / (
-            FTE_HOURS_PER_YEAR * (ytd_prod_hours / ytd_hours)
+            static_data.FTE_HOURS_PER_YEAR * (ytd_prod_hours / ytd_hours)
         )
         s["fte_variance_dollars"] = (
             s["variance_hours_per_volume"] * ytd_volume * hourly_rate

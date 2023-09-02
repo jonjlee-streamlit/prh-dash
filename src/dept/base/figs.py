@@ -20,8 +20,8 @@ def aggrid_income_stmt(df, month=None):
     if month:
         # Convert month from format "2023-01" to "Jan 2023"
         month = datetime.strptime(month, "%Y-%m").strftime("%b %Y")
-        df.columns.values[-2] = f"Year Actual through {month}"
-        df.columns.values[-1] = f"Year Budget through {month}"
+        df.columns.values[-2] = f"Actual, Year to {month}"
+        df.columns.values[-1] = f"Budget, Year to {month}"
 
     # Create AgGrid display configuration to do row grouping and bolding
     gb = GridOptionsBuilder.from_dataframe(df)
