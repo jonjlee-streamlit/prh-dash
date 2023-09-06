@@ -4,6 +4,7 @@ Route an incoming request to based on the URL query parameters to the correspond
 import streamlit as st
 
 DEFAULT = "default"
+UPDATE = "update"
 
 # IDs for department dashboards
 ACUPUNCTURE = "acupuncture"
@@ -37,26 +38,20 @@ DEPTS = (
     ACUPUNCTURE,
     BEHAVIORAL_HEALTH,
     BIRTHPLACE,
-    CARDIO_PULM_REHAB,
     CARDIOLOGY,
     ED,
     FAMILY_MED,
     GENETICS,
-    HOSPITALIST,
     ICU,
     IMAGING,
     LAB,
     MASSAGE,
     MSU,
-    NUTRITION,
     PEDIATRICS,
-    PHARMACY,
     PODIATRY,
     REDSAGE,
     REHAB,
     RESIDENCY,
-    RESPIRATORY,
-    SAME_DAY,
     SLEEP,
     SUMMIT,
     SURGERY,
@@ -74,8 +69,11 @@ def route_by_query(query_params: dict) -> str:
     Expects query_params to be in the format { "param": ["value 1", "value 2" ] }, corresponding to Streamlit docs:
     https://docs.streamlit.io/library/api-reference/utilities/st.experimental_get_query_params
     """
+    update = query_params.get("update")
     dept = query_params.get("dept")
     api = query_params.get("api")
+    if update and len(update) > 0 and update[0] == "1":
+        return UPDATE
     if api and len(api) > 0 and api[0] in API:
         return api[0]
     if dept and len(dept) > 0 and dept[0] in DEPTS:

@@ -1,5 +1,5 @@
 import streamlit as st
-from src import auth, route, source_data, dept
+from src import auth, route, source_data, dept, update
 
 
 def run():
@@ -13,23 +13,23 @@ def run():
     query_params = st.experimental_get_query_params()
     route_id = route.route_by_query(query_params)
 
-    # Check for access to API resources first
-    if route_id == route.CLEAR_CACHE:
+    # Check for access to update / API resources first
+    if route_id == route.UPDATE:
+        return update.show_page()
+    elif route_id == route.CLEAR_CACHE:
         return clear_cache()
-
-    # Interactive user authentication for access to dashboard pages
-    if not auth.authenticate():
-        return st.stop()
 
     # Render page based on the route
     if src_data is None:
         return st.write("No data available. Please contact administrator.")
     elif route_id in route.DEPTS:
+        # Interactive user authentication for access to dashboard pages
+        if not auth.authenticate():
+            return st.stop()
+
         return dept.base.dept_page(src_data, route_id)
     else:
-        return st.write(
-            "Please contact your administrator for a department specific link to access your dashboard."
-        )
+        return show_index()
 
 
 def clear_cache():
@@ -41,6 +41,19 @@ def clear_cache():
         'Cache cleared. <a href="/" target="_self">Return to dashboard.</a>',
         unsafe_allow_html=True,
     )
+
+
+def show_index():
+    """
+    Show links to the various dashboards
+    """
+    links = []
+    for r in route.DEPTS:
+        dept_name = dept.base.configs.DEPT_CONFIG[r].name
+        links.append(f'* <a href="/?dept={r}" target="_self">{dept_name}</a>')
+
+    st.header("Dashboards")
+    st.markdown("\n".join(links), unsafe_allow_html=True)
 
 
 st.set_page_config(
