@@ -359,6 +359,43 @@ def month_str_to_dates(month_str: str) -> typing.Tuple[datetime, datetime]:
     return (first_day, last_day)
 
 
+def period_str_to_month_strs(dates: str) -> typing.Tuple[str, str]:
+    """
+    Convert a time period string, such as "Month to Date", "Last 12 Months", etc
+    to start and end month strings, in the format "2023-01", which can be compared.
+    Returns a tuple (first month, last month)
+
+    Similar to period_str_to_dates(), but returns month strings instead of datetimes.
+    """
+    dates = dates.lower()
+    today = datetime.today()
+
+    def dates_to_months(date1: datetime, date2: datetime):
+        return (date1.strftime("%Y-%m"), date2.strftime("%Y-%m"))
+
+    if dates == "month to date":
+        return dates_to_months(today, today)
+    elif dates == "year to date":
+        first_date = datetime(today.year, 1, 1)
+        return dates_to_months(first_date, today)
+    elif dates == "last year":
+        last_year = today.year - 1
+        first_date = datetime(last_year, 1, 1)
+        last_date = datetime(last_year, 12, 31)
+        return dates_to_months(first_date, last_date)
+    elif dates == "12 months":
+        first_date = datetime(today.year - 1, today.month, 1)
+        return dates_to_months(first_date, today)
+    elif dates == "24 months":
+        first_date = datetime(today.year - 2, today.month, 1)
+        return dates_to_months(first_date, today)
+    elif dates == "5 years":
+        first_date = datetime(today.year - 5, today.month, 1)
+        return dates_to_months(first_date, today)
+    else:
+        return None, None
+
+
 # -----------------------------------
 # Finance functions
 # -----------------------------------

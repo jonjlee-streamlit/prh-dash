@@ -2,6 +2,7 @@ import streamlit as st
 from ... import source_data
 from . import configs, data, ui, figs
 
+
 def dept_page(src_data: source_data.SourceData, route_id: str):
     """
     Show department specific Streamlit page
@@ -10,21 +11,13 @@ def dept_page(src_data: source_data.SourceData, route_id: str):
     # route.py based on the "dept" URL query param.
     dept_config = configs.config_from_route(route_id)
     if dept_config is None:
-        return st.write('Dashboard for this department is not yet available.')
+        return st.write("Dashboard for this department is not yet available.")
 
     # Get user settings
     user_settings = ui.show_settings(dept_config)
 
-    # Process the source data by filtering and generating the specifc metrics displayed in the UI 
+    # Process the source data by filtering and generating the specifc metrics displayed in the UI
     dept_data = data.process(dept_config, user_settings, src_data)
 
     # Show main content
     ui.show(dept_config, user_settings, dept_data)
-
-    st.write(dept_data.hours)
-    st.write(dept_data.hours_for_month)
-    st.write(dept_data.hours_ytd)
-    st.write(dept_data.volumes)
-    figs.aggrid_income_stmt(dept_data.income_stmt, user_settings["month"])
-    st.write(dept_data.stats)
-    pass

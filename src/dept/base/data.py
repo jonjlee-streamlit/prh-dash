@@ -5,6 +5,7 @@ Transform source data into department specific data that can be displayed on das
 import pandas as pd
 from dataclasses import dataclass
 from datetime import date
+from dateutil.relativedelta import relativedelta
 from .configs import DeptConfig
 from ... import source_data, income_statment, static_data
 
@@ -13,7 +14,6 @@ from ... import source_data, income_statment, static_data
 class DeptData:
     # Settings
     dept: str
-    month: str
     pay_period: str
 
     # Patient volumes from stats report card
@@ -22,8 +22,9 @@ class DeptData:
     # Productive / Non-productive hours
     hours: pd.DataFrame
 
-    # Summary tables of hours and FTE
-    hours_for_month: pd.DataFrame
+    # Summary table of hours and FTE
+    latest_pay_period: str
+    hours_latest_pay_period: pd.DataFrame
     hours_ytd: pd.DataFrame
 
     # Income statement for a specific department and time period
@@ -33,15 +34,16 @@ class DeptData:
     stats: dict
 
 
-def process(config: DeptConfig, settings: dict, src: source_data.SourceData) -> DeptData:
+def process(
+    config: DeptConfig, settings: dict, src: source_data.SourceData
+) -> DeptData:
     """
     Receives raw source data from database.
     Partitions and computes statistics to be displayed by the app.
     settings contains any configuration from the sidebar that the user selects.
     """
-    dept_id, month, pay_period = (
+    dept_id, pay_period = (
         settings["dept_id"],
-        settings["month"],
         settings.get("pay_period", "2023-01"),
     )
 
@@ -53,40 +55,49 @@ def process(config: DeptConfig, settings: dict, src: source_data.SourceData) -> 
 
     # Sort volume data by time
     volumes_df = src.volumes_df[src.volumes_df["dept_wd_id"].isin(wd_ids)]
-    volumes = volumes_df.sort_values(by=["month", "dept_name"], ascending=[False, True])
+    volumes = _calc_volumes_history(volumes_df)
 
     # Organize income statement data into a human readable table grouped into categories
     income_stmt_df = src.income_stmt_df[src.income_stmt_df["dept_wd_id"].isin(wd_ids)]
-    income_stmt = _calc_income_stmt_for_month(income_stmt_df, month)
 
     # Create summary tables for hours worked by month and year
     hours_df = src.hours_df[src.hours_df["dept_wd_id"].isin(wd_ids)]
-    hours_for_month = _calc_hours_for_payperiod(hours_df, pay_period)
+    latest_pay_period = hours_df["pay_period"].max()
+    hours_lastest_pay_period = _calc_hours_for_payperiod(hours_df, latest_pay_period)
     hours_ytd = _calc_hours_ytd(hours_df)
+    hours_df = _calc_hours_history(hours_df)
 
     # Pre-calculate statistics that are individual numbers, like overall revenue per encounter
     stats = _calc_stats(wd_ids, settings, src, volumes, hours_ytd, income_stmt_df)
 
     return DeptData(
         dept=wd_ids,
-        month=month,
         pay_period=pay_period,
         volumes=volumes,
         hours=hours_df,
-        hours_for_month=hours_for_month,
+        latest_pay_period=latest_pay_period,
+        hours_latest_pay_period=hours_lastest_pay_period,
         hours_ytd=hours_ytd,
-        income_stmt=income_stmt,
+        income_stmt=income_stmt_df,
         stats=stats,
     )
 
 
-def _calc_hours_for_payperiod(df: pd.DataFrame, pay_period: str) -> pd.DataFrame:
+def _calc_volumes_history(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Returns volumes for each month totaled across departments, sorted in reverse chronologic order by month
+    """
+    df = df.groupby("month")["volume"].sum().reset_index()
+    return df.sort_values(by=["month"], ascending=[False])
+
+
+def _calc_hours_for_payperiod(df: pd.DataFrame, payperiod: str) -> pd.DataFrame:
     """
     Given a pay period, summarize the regular, overtime, productive/non-productive hours and total FTE
     payperiod should be in the format YYYY-##, where ## is between 01 and 26
     """
-    # Find the row that matches our pay period
-    df = df[df["pay_period"] == pay_period].reset_index(drop=True)
+    # Find the rows for the latest pay period
+    df = df[df["pay_period"] == payperiod].reset_index(drop=True)
 
     # Return the columns that are displayed in the FTE tab summary table
     columns = [
@@ -127,7 +138,25 @@ def _calc_hours_ytd(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=columns)
 
 
-def _calc_income_stmt_for_month(stmt: pd.DataFrame, month: str) -> pd.DataFrame:
+def _calc_hours_history(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Returns productive / non-productive hours and FTE for each month totaled across departments, sorted in reverse chronologic order by pay period number
+    """
+    df = df.groupby("pay_period").sum().reset_index()
+    df = df.sort_values(by=["pay_period"], ascending=[True])
+    return df[
+        [
+            "pay_period",
+            "reg_hrs",
+            "overtime_hrs",
+            "prod_hrs",
+            "nonprod_hrs",
+            "total_fte",
+        ]
+    ]
+
+
+def calc_income_stmt_for_month(stmt: pd.DataFrame, month: str) -> pd.DataFrame:
     # Filter data for given month
     stmt = stmt[stmt["month"] == month]
     ret = income_statment.generate_income_stmt(stmt)
@@ -147,8 +176,9 @@ def _calc_stats(
 
     # Get the volume for the selected month and current year. The volumes table has
     # one number in the volume column for each department per month
-    sel_month, cur_year = settings["month"], str(date.today().year)
-    month_volume = volumes.loc[volumes["month"] == sel_month, "volume"].sum()
+    cur_year = str(date.today().year)
+    last_month = date.strftime(date.today() - relativedelta(months=1), "%Y-%m")
+    last_month_volume = volumes.loc[volumes["month"] == last_month, "volume"].sum()
     ytd_volume = volumes.loc[volumes["month"].str.startswith(cur_year), "volume"].sum()
 
     # There is one budget row for each department. Sum them for overall budget,
@@ -192,15 +222,19 @@ def _calc_stats(
 
     # Get the YTD budgeted volume based on the proportion of the annual budgeted volume
     # for the number of months of the year for which we have revenue / income statement information
-    [income_stmt_max_year, income_stmt_max_month] = income_stmt_df["month"].max().split("-")
+    [income_stmt_max_year, income_stmt_max_month] = (
+        income_stmt_df["month"].max().split("-")
+    )
     if income_stmt_max_year == cur_year:
-        ytd_budget_volume = budget_df.at["budget_volume"] * (int(income_stmt_max_month) / 12)
+        ytd_budget_volume = budget_df.at["budget_volume"] * (
+            int(income_stmt_max_month) / 12
+        )
     else:
         # No revenue data for current year yet, YTD budgets are all 0
         ytd_budget_volume = 0
 
     # Volumes for the selected month and YTD show up on the Volumes tab, Summary section
-    s["month_volume"] = month_volume
+    s["last_month_volume"] = last_month_volume
     s["ytd_volume"] = ytd_volume
 
     # Budgeted FTE shows up as a threshold line on the FTE graph
