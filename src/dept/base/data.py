@@ -28,6 +28,7 @@ class DeptData:
     hours_ytd: pd.DataFrame
 
     # Income statement for a specific department and time period
+    avail_income_stmt_months: list
     income_stmt: pd.DataFrame
 
     # Single value calculations, like YTD volume
@@ -59,6 +60,7 @@ def process(
 
     # Organize income statement data into a human readable table grouped into categories
     income_stmt_df = src.income_stmt_df[src.income_stmt_df["dept_wd_id"].isin(wd_ids)]
+    avail_income_stmt_months = sorted(income_stmt_df["month"].unique(), reverse=True)
 
     # Create summary tables for hours worked by month and year
     hours_df = src.hours_df[src.hours_df["dept_wd_id"].isin(wd_ids)]
@@ -78,6 +80,7 @@ def process(
         latest_pay_period=latest_pay_period,
         hours_latest_pay_period=hours_lastest_pay_period,
         hours_ytd=hours_ytd,
+        avail_income_stmt_months=avail_income_stmt_months,
         income_stmt=income_stmt_df,
         stats=stats,
     )
@@ -151,6 +154,7 @@ def _calc_hours_history(df: pd.DataFrame) -> pd.DataFrame:
             "overtime_hrs",
             "prod_hrs",
             "nonprod_hrs",
+            "total_hrs",
             "total_fte",
         ]
     ]
@@ -241,8 +245,8 @@ def _calc_stats(
     s["budget_fte"] = budget_df.at["budget_fte"]
 
     # KPIs
-    s["revenue_per_volume"] = ytd_revenue / ytd_volume
-    s["expense_per_volume"] = ytd_expense / ytd_volume
+    s["revenue_per_volume"] = ytd_revenue / ytd_volume if ytd_volume > 0 else 0
+    s["expense_per_volume"] = ytd_expense / ytd_volume if ytd_volume > 0 else 0
 
     if ytd_budget_volume and ytd_budget_revenue and ytd_budget_expense:
         s["target_revenue_per_volume"] = ytd_budget_revenue / ytd_budget_volume

@@ -188,8 +188,8 @@ def hours_table(latest_payperiod, hours_latest_pay_period, hours_ytd):
 def fte_fig(src, budget_fte):
     df = src[["pay_period", "total_fte"]]
     df = df.sort_values(by=["pay_period"], ascending=[True])
-    df["pay_period"] = df["pay_period"].apply(lambda x: f"{x[:4]} PP#{x[-2:]}")
-    df.columns = ["Pay Period #", "FTE"]
+    df["pay_period"] = df["pay_period"].apply(lambda x: f"{x[:4]} #{x[-2:]}")
+    df.columns = ["Pay Period", "FTE"]
     fig = px.bar(
         df, x=df.columns[0], y=df.columns[1], text=df.columns[1], text_auto=".1f"
     )
@@ -201,7 +201,7 @@ def fte_fig(src, budget_fte):
     )
     # Text for budget line. Place over last visible month and shift to the right by 80 pixels.
     fig.add_annotation(
-        x=df["Pay Period #"].iloc[-1],
+        x=df["Pay Period"].iloc[-1],
         y=budget_fte,
         xref="x",
         yref="y",
@@ -222,38 +222,39 @@ def fte_fig(src, budget_fte):
             ]
         )
     )
-    # Remove excessive top margin
     fig.update_layout(
-        margin={"t": 0},
+        margin={"t": 25},
     )
     st.plotly_chart(fig, use_container_width=True)
 
 
 def hours_fig(src):
-    df = src[["pay_period", "prod_hrs", "nonprod_hrs"]]
-    df["pay_period"] = df["pay_period"].apply(lambda x: f"{x[:4]} PP#{x[-2:]}")
-    df.columns = ["Pay Period #", "Productive", "Non-productive"]
+    df = src[["pay_period", "prod_hrs", "nonprod_hrs", "total_hrs"]]
+    df["pay_period"] = df["pay_period"].apply(lambda x: f"{x[:4]} #{x[-2:]}")
+    df["prod_hrs"] = df["prod_hrs"] / df["total_hrs"]
+    df["nonprod_hrs"] = df["nonprod_hrs"] / df["total_hrs"]
+    df.columns = ["Pay Period", "Productive", "Non-productive", "Total Hours"]
     fig = px.bar(
         df,
         x=df.columns[0],
         y=[df.columns[1], df.columns[2]],
-        text_auto=".1f",
+        text_auto=".1%",
     )
     fig.update_yaxes(title_text="Hours")
-    fig.update_layout(legend_title_text="")
+    fig.update_layout(legend_title_text="", yaxis={"tickformat": ",.1%"})
 
     # On hover text, show pay period number "2023 PP#1" and round y value to 1 decimal
     fig.update_traces(
         hovertemplate="<br>".join(
             [
                 "%{x}",
-                "%{y:.1f}h",
+                "%{y:.1%}",
             ]
         )
     )
 
     # Remove excessive top margin
     fig.update_layout(
-        margin={"t": 0},
+        margin={"t": 25},
     )
     st.plotly_chart(fig, use_container_width=True)

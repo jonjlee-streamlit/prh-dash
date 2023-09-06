@@ -13,7 +13,7 @@ def dept_page(src_data: source_data.SourceData, route_id: str):
     if dept_config is None:
         return st.write("Dashboard for this department is not yet available.")
 
-    # Get user settings
+    # Get sidebar user settings. Settings embedded in the content handled by ui module.
     user_settings = ui.show_settings(dept_config)
 
     # Process the source data by filtering and generating the specifc metrics displayed in the UI

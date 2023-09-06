@@ -31,7 +31,7 @@ def show_settings(config: configs.DeptConfig) -> dict:
         else:
             dept_id = config.wd_ids[0]
 
-        st.subheader("Section")
+        st.subheader("Sections")
         st.markdown(
             "\n".join(
                 [
@@ -103,7 +103,7 @@ def _show_kpi(settings: dict, data: data.DeptData):
         f"${round(s['target_expense_per_volume'])}",
     )
 
-    st.subheader("Productivity Measures")
+    st.subheader("Productivity")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Hours per Exam", round(s["hours_per_volume"], 2))
     col2.metric("Target Hours per Exam", round(s["target_hours_per_volume"], 2))
@@ -124,7 +124,7 @@ def _show_volumes(settings: dict, data: data.DeptData):
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(f"Last Month ({last_month})", data.stats["last_month_volume"])
-    col2.metric(f"YTD", data.stats["ytd_volume"])
+    col2.metric(f"Year to Date", data.stats["ytd_volume"])
 
     # Show graph of historical volumes. Allow user to select how many months to show.
     st.subheader("Volumes by Month")
@@ -153,29 +153,28 @@ def _show_hours(settings: dict, data: data.DeptData):
     # Show graph of historical FTE. Allow user to select how many months to show.
     st.write("&nbsp;")
     st.subheader("FTE and Hours")
-    col_graph, col_period = st.columns((13, 3))
-    with col_period:
-        fte_period = st.selectbox(
-            key="fte_period",
-            label="Show",
-            label_visibility="collapsed",
-            options=["All Pay Periods"],
-        )
 
-    with col_graph:
-        col1, col2 = st.columns(2)
-        df = data.hours
-        with col1:
-            figs.fte_fig(df, data.stats["budget_fte"])
-        with col2:
-            figs.hours_fig(data.hours)
+    # Select the pay period number
+    fte_period = st.selectbox(
+        key="fte_period",
+        label="Pay Period",
+        label_visibility="collapsed",
+        options=["Year to Date", "2 Years", "5 Years", "All Pay Periods"]
+    )
+
+    col1, col2 = st.columns(2)
+    df = _filter_pay_periods_by_desc(data.hours, fte_period)
+    with col1:
+        figs.fte_fig(df, data.stats["budget_fte"])
+    with col2:
+        figs.hours_fig(df)
 
 
 def _show_income_stmt(settings: dict, data: data.DeptData):
     month = st.selectbox(
         label="Month",
         label_visibility="hidden",
-        options=_prev_months(24),
+        options=data.avail_income_stmt_months,
         format_func=lambda m: datetime.strptime(m, "%Y-%m").strftime("%b %Y"),
     )
 
@@ -196,3 +195,13 @@ def _filter_by_period(df, period_str, col="month"):
     if last_month:
         df = df[df.loc[:, col] <= last_month]
     return df
+
+def _filter_pay_periods_by_desc(df, period_str):
+    if period_str == "All Pay Periods":
+        return df
+    if period_str == "Year to Date":
+        return df[df["pay_period"] >= f"{datetime.today().year}-01"]
+    if period_str == "2 Years":
+        return df[df["pay_period"] >= f"{datetime.today().year-1}-01"]
+    if period_str == "5 Years":
+        return df[df["pay_period"] >= f"{datetime.today().year-4}-01"]
