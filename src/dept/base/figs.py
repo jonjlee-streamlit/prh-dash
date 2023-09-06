@@ -208,6 +208,7 @@ def fte_fig(src, budget_fte):
         text=f"Budget: {budget_fte}",
         showarrow=False,
         font=dict(size=14, color="red"),
+        bgcolor="rgba(255, 255, 255, 0.94)",
         align="left",
         xshift=0,
         yshift=15,
