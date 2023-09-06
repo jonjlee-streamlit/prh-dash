@@ -152,7 +152,7 @@ def _show_hours(settings: dict, data: data.DeptData):
 
     # Show graph of historical FTE. Allow user to select how many months to show.
     st.write("&nbsp;")
-    st.subheader("FTE and Hours")
+    st.subheader("By Pay Period")
 
     # Select the pay period number
     fte_period = st.selectbox(
