@@ -12,14 +12,15 @@ class DeptConfig:
 
 
 DEPT_CONFIG = {
-    route.ACUPUNCTURE: DeptConfig("Acupuncture", ["CC_72045"]),
-    route.BEHAVIORAL_HEALTH: DeptConfig("Palouse Psychiatry and Behavioral Health", ["CC_72760"]),
+    route.BEHAVIORAL_HEALTH: DeptConfig(
+        "Palouse Psychiatry and Behavioral Health", ["CC_72760"]
+    ),
     route.BIRTHPLACE: DeptConfig("Birthplace", ["CC_60790"]),
     route.CARDIO_PULM_REHAB: DeptConfig("Cardiopulmonary Rehabilitation", ["CC_71850"]),
     route.CARDIOLOGY: DeptConfig("Palouse Heart Center", ["CC_72790"]),
-    route.ED: DeptConfig("Emergency", ["CC_72300", "CC_72390"]),
+    route.ED_DEPT: DeptConfig("Emergency Department", ["CC_72300"]),
+    route.ED_PHYSICIANS: DeptConfig("Emergency Physicians", ["CC_72390"]),
     route.FAMILY_MED: DeptConfig("Pullman Family Medicine", ["CC_72770"]),
-    route.GENETICS: DeptConfig("Genetic Counseling", ["CC_72055"]),
     route.HOSPITALIST: DeptConfig("Hospitalist", ["CC_60150"]),
     route.ICU: DeptConfig("ICU", ["CC_60100"]),
     route.IMAGING: DeptConfig(
@@ -34,20 +35,29 @@ DEPT_CONFIG = {
         ],
     ),
     route.LAB: DeptConfig("Laboratory", ["CC_70700"]),
-    route.MASSAGE: DeptConfig("Massage Therapy", ["CC_72025"]),
     route.MSU: DeptConfig("Medical Surgical Unit", ["CC_60700"]),
     route.NUTRITION: DeptConfig("Nutrition Therapy", ["CC_83210"]),
     route.PEDIATRICS: DeptConfig("Palouse Pediatrics", ["CC_72745", "CC_72740"]),
     route.PHARMACY: DeptConfig("Pharmacy", ["CC_71700"]),
     route.PODIATRY: DeptConfig("Pullman Foot and Ankle Clinic", ["CC_72720"]),
     route.REDSAGE: DeptConfig("Red Sage", ["CC_83200"]),
-    route.REHAB: DeptConfig("Rehabilitation Services", ["CC_72000"]),
     route.RESIDENCY: DeptConfig("Family Medicine Residency", ["CC_74910"]),
     route.RESPIRATORY: DeptConfig("Respiratory Care Services", ["CC_71800"]),
     route.SAME_DAY: DeptConfig("Same Day Services", ["CC_70260"]),
-    route.SLEEP: DeptConfig("Palouse Sleep Medicine and Pulmonology", ["CC_72785", "CC_71810"]),
-    route.SUMMIT: DeptConfig("Summit", ["CC_72045", "CC_72055", "CC_72025", "CC_72015"]),
-    route.SURGERY: DeptConfig("Surgery", ["CC_70200", "CC_72780"]),
+    route.SLEEP: DeptConfig("Palouse Sleep Medicine and Pulmonology", ["CC_72785"]),
+    route.SLEEP_LAB: DeptConfig("Sleep Lab", ["CC_71810"]),
+    route.SUMMIT: DeptConfig(
+        "Summit",
+        [
+            "CC_72000",  # Rehab PT/OT/ST
+            "CC_72015",  # Stadium Way
+            "CC_72045",  # Acupuncture
+            "CC_72025",  # Massage
+            "CC_72055",  # Genetics
+        ],
+    ),
+    route.SURGERY: DeptConfig("Pullman Surgical Associates", ["CC_72780"]),
+    route.SURGICAL_SVC: DeptConfig("Surgical Services", ["CC_70200"]),
     route.UROLOGY: DeptConfig("Palouse Urology", ["CC_72750"]),
 }
 

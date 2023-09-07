@@ -12,7 +12,8 @@ BEHAVIORAL_HEALTH = "bh"
 BIRTHPLACE = "birthplace"
 CARDIO_PULM_REHAB = "cardio_pulm_rehab"
 CARDIOLOGY = "heart_center"
-ED = "ed"
+ED_DEPT = "ed_dept"
+ED_PHYSICIANS = "ed_phys"
 FAMILY_MED = "family_med"
 GENETICS = "genetics"
 HOSPITALIST = "hospitalist"
@@ -31,30 +32,31 @@ RESIDENCY = "residency"
 RESPIRATORY = "respiratory"
 SAME_DAY = "same_day"
 SLEEP = "sleep"
+SLEEP_LAB = "sleep_lab"
 SUMMIT = "summit"
 SURGERY = "surgery"
+SURGICAL_SVC = "surgical_svc"
 UROLOGY = "urology"
 DEPTS = (
-    ACUPUNCTURE,
     BEHAVIORAL_HEALTH,
     BIRTHPLACE,
     CARDIOLOGY,
-    ED,
+    ED_DEPT,
+    ED_PHYSICIANS,
     FAMILY_MED,
-    GENETICS,
     ICU,
     IMAGING,
     LAB,
-    MASSAGE,
     MSU,
     PEDIATRICS,
     PODIATRY,
     REDSAGE,
-    REHAB,
     RESIDENCY,
     SLEEP,
+    SLEEP_LAB,
     SUMMIT,
     SURGERY,
+    SURGICAL_SVC,
     UROLOGY,
 )
 
