@@ -229,7 +229,7 @@ def fte_fig(src, budget_fte):
 
 
 def hours_fig(src):
-    df = src[["pay_period", "prod_hrs", "nonprod_hrs", "total_hrs"]]
+    df = src[["pay_period", "prod_hrs", "nonprod_hrs", "total_hrs"]].copy()
     df["pay_period"] = df["pay_period"].apply(lambda x: f"{x[:4]} #{x[-2:]}")
     df["prod_hrs"] = df["prod_hrs"] / df["total_hrs"]
     df["nonprod_hrs"] = df["nonprod_hrs"] / df["total_hrs"]
