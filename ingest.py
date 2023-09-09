@@ -3,7 +3,7 @@ import re
 import contextlib
 import logging
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from src.model import (
@@ -47,6 +47,13 @@ HISTORICAL_HOURS_FILE = os.path.join(
     BASE_PATH, "PayPeriod", "2022", "PP#1-PP#25 Payroll Productivity.xlsx"
 )
 HOURS_PATH = os.path.join(BASE_PATH, "PayPeriod")
+
+# Starting point for converting bi-weekly pay period number to start and end dates. Set to the start date of pay period 1 for the given year.
+# Pay periods go from Saturday -> Friday two weeks later, and the pay date is on the Friday following the pay period.
+PAY_PERIOD_ANCHOR_DATE = {
+    "year": 2023,
+    "start_date": datetime(2022, 12, 17),
+}
 
 
 def create_schema(engine):
@@ -469,6 +476,49 @@ def read_hours_and_fte_data(files):
     return pd.concat(ret)
 
 
+def pay_period_to_dates(df):
+    """
+    Convert the pay_period column to start_date and end_date
+    """
+
+    def find_start_date_of_first_pay_period_in_year(year):
+        # If needed, walk the anchor date back by 2 weeks increments until anchor is in a prior to target year.
+        # PAY_PERIOD_ANCHOR_DATE["start_date"] is the start date of pay period #1 in the year PAY_PERIOD_ANCHOR_DATE["year"].
+        # It is likely a date in Dec of the previous year.
+        cur_date = PAY_PERIOD_ANCHOR_DATE["start_date"]
+        if year < PAY_PERIOD_ANCHOR_DATE["year"]:
+            while year <= cur_date.year:
+                cur_date += timedelta(days=-14)
+
+        # The pay date for a pay period is the Friday following the end of the pay period, which is 20 days
+        # from start_date. Walk forward from the anchor start_date 14 days at a time. Once the pay date is in the
+        # target year, we have the dates for the first pay period in that year.
+        while cur_date.year <= year:
+            pay_date = cur_date + timedelta(days=20)
+            if pay_date.year == year:
+                return cur_date
+            cur_date += timedelta(days=14)
+
+    # Calculate start dates for every pay period in the years found in data
+    min_year, _pp_num = map(int, df["pay_period"].min().split("-"))
+    max_year, _pp_num = map(int, df["pay_period"].max().split("-"))
+    pay_period_to_start_date = {}
+    for year in range(min_year, max_year + 1):
+        cur_date = find_start_date_of_first_pay_period_in_year(year)
+        pay_period = 1
+        while True:
+            pay_date = cur_date + timedelta(days=20)
+            if pay_date.year > year:
+                break
+            pay_period_to_start_date[f"{year:04d}-{pay_period:02d}"] = cur_date
+            cur_date += timedelta(days=14)
+            pay_period += 1
+
+    df = df.copy()
+    df["start_date"] = df["pay_period"].map(pay_period_to_start_date)
+    return df
+
+
 def clear_table_and_insert_data(session, table, df, df_column_order=None):
     """
     Deletes rows from the given table and reinsert data from dataframe
@@ -505,7 +555,7 @@ if __name__ == "__main__":
     source_files = (
         [VOLUMES_FILE, HISTORICAL_HOURS_FILE] + income_stmt_files + hours_files
     )
-    source_files_str = '\n  '.join(source_files)
+    source_files_str = "\n  ".join(source_files)
     logging.info(f"Discovered source files:\n  {source_files_str}")
 
     # TODO: data verification
@@ -526,6 +576,9 @@ if __name__ == "__main__":
     historical_hours_df = read_historical_hours_and_fte_data(HISTORICAL_HOURS_FILE)
     hours_df = read_hours_and_fte_data(hours_files)
     hours_df = pd.concat([historical_hours_df, hours_df])
+
+    # Transform hours data to months
+    df = pay_period_to_dates(hours_df)
 
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(db) as session:
