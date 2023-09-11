@@ -14,7 +14,7 @@ def dept_page(src_data: source_data.SourceData, route_id: str):
         return st.write("Dashboard for this department is not yet available.")
 
     # Get sidebar user settings. Settings embedded in the content handled by ui module.
-    user_settings = ui.show_settings(dept_config)
+    user_settings = ui.show_settings(dept_config, src_data)
 
     # Process the source data by filtering and generating the specifc metrics displayed in the UI
     dept_data = data.process(dept_config, user_settings, src_data)

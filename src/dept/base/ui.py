@@ -3,11 +3,11 @@ import streamlit as st
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from . import configs, data, figs
-from ... import util, static_data
+from ... import util, static_data, source_data
 from .data import calc_income_stmt_for_month
 
 
-def show_settings(config: configs.DeptConfig) -> dict:
+def show_settings(config: configs.DeptConfig, src_data: source_data.SourceData) -> dict:
     """
     Render the sidebar and return the dict with configuration options set by the user.
     """
@@ -18,6 +18,15 @@ def show_settings(config: configs.DeptConfig) -> dict:
             if id == "All"
             else static_data.WDID_TO_DEPT_NAME.get(id) or f"Unknown Department {id}"
         )
+    
+    def enumerate_months(min_month, max_month):
+        min_month = datetime.strptime(min_month, '%Y-%m')
+        cur_month = datetime.strptime(max_month, '%Y-%m')
+        months = []
+        while cur_month >= min_month:
+            months.append(cur_month.strftime('%Y-%m'))
+            cur_month += relativedelta(months=-1)
+        return months
 
     with st.sidebar:
         util.st_sidebar_prh_logo()
@@ -31,6 +40,23 @@ def show_settings(config: configs.DeptConfig) -> dict:
         else:
             dept_id = config.wd_ids[0]
 
+        # Get the minimum and maximum months in the data
+        min_month = min(
+            src_data.volumes_df["month"].min(),
+            src_data.hours_df["month"].min(),
+            src_data.income_stmt_df["month"].min(),
+        )
+        max_month = max(
+            src_data.volumes_df["month"].max(),
+            src_data.hours_df["month"].max(),
+            src_data.income_stmt_df["month"].max(),
+        )
+        month = st.selectbox(
+            label="Month",
+            options=enumerate_months(min_month, max_month),
+            format_func=lambda m: datetime.strptime(m, "%Y-%m").strftime("%b %Y"),
+        )
+
         st.subheader("Sections")
         st.markdown(
             "\n".join(
@@ -43,7 +69,7 @@ def show_settings(config: configs.DeptConfig) -> dict:
             )
         )
 
-    return {"dept_id": dept_id, "dept_name": dept_id_to_name(dept_id)}
+    return {"dept_id": dept_id, "dept_name": dept_id_to_name(dept_id), "month": month}
 
 
 def _prev_months(n_months):
@@ -68,13 +94,14 @@ def show(config: configs.DeptConfig, settings: dict, data: data.DeptData):
         st.title(f"{config.name}")
 
     # Main content
-    st.header("Key Performance Indicators", anchor="kpis", divider="gray")
+    st.header("Key Performance Indicators (YTD)", anchor="kpis", divider="gray")
     _show_kpi(settings, data)
     st.header("Volumes", anchor="volumes", divider="gray")
     _show_volumes(settings, data)
     st.header("Hours and FTE", anchor="hours", divider="gray")
     _show_hours(settings, data)
-    st.header("Income Statement", anchor="income", divider="gray")
+    month_str = datetime.strptime(settings["month"], "%Y-%m").strftime("%b %Y")
+    st.header(f"Income Statement - {month_str}", anchor="income", divider="gray")
     _show_income_stmt(settings, data)
 
 
@@ -120,11 +147,12 @@ def _show_kpi(settings: dict, data: data.DeptData):
 
 
 def _show_volumes(settings: dict, data: data.DeptData):
-    last_month = datetime.strftime(datetime.today() - relativedelta(months=1), "%b %Y")
+    month = datetime.strptime(settings["month"], "%Y-%m").strftime("%b %Y")
 
+    st.subheader("Summary")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric(f"Last Month ({last_month})", data.stats["last_month_volume"])
-    col2.metric(f"Year to Date", data.stats["ytd_volume"])
+    col1.metric(f"Month ({month})", data.stats["month_volume"])
+    col2.metric(f"Year to {month}", data.stats["ytd_volume"])
 
     # Show graph of historical volumes. Allow user to select how many months to show.
     st.subheader("Volumes by Month")
@@ -147,7 +175,7 @@ def _show_hours(settings: dict, data: data.DeptData):
     # Show productive / non-productive hours for month
     st.subheader("Summary")
     figs.hours_table(
-        data.latest_pay_period, data.hours_latest_pay_period, data.hours_ytd
+        data.month, data.hours_for_month, data.hours_ytm
     )
 
     # Show graph of historical FTE. Allow user to select how many months to show.
@@ -159,11 +187,12 @@ def _show_hours(settings: dict, data: data.DeptData):
         key="fte_period",
         label="Pay Period",
         label_visibility="collapsed",
-        options=["Year to Date", "2 Years", "5 Years", "All Pay Periods"]
+        options=["Year to Date", "2 Years", "5 Years", "All Pay Periods"],
     )
 
     col1, col2 = st.columns(2)
-    df = _filter_pay_periods_by_desc(data.hours, fte_period)
+    df = data.hours
+    # df = _filter_pay_periods_by_desc(data.hours, fte_period)
     with col1:
         figs.fte_fig(df, data.stats["budget_fte"])
     with col2:
@@ -171,16 +200,8 @@ def _show_hours(settings: dict, data: data.DeptData):
 
 
 def _show_income_stmt(settings: dict, data: data.DeptData):
-    month = st.selectbox(
-        label="Month",
-        label_visibility="hidden",
-        options=data.avail_income_stmt_months,
-        format_func=lambda m: datetime.strptime(m, "%Y-%m").strftime("%b %Y"),
-    )
-
-    income_stmt = calc_income_stmt_for_month(data.income_stmt, month)
-
-    figs.aggrid_income_stmt(income_stmt, month)
+    income_stmt = calc_income_stmt_for_month(data.income_stmt, settings["month"])
+    figs.aggrid_income_stmt(income_stmt, settings["month"])
 
 
 def _filter_by_period(df, period_str, col="month"):
@@ -195,6 +216,7 @@ def _filter_by_period(df, period_str, col="month"):
     if last_month:
         df = df[df.loc[:, col] <= last_month]
     return df
+
 
 def _filter_pay_periods_by_desc(df, period_str):
     if period_str == "All Pay Periods":
