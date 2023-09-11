@@ -396,7 +396,10 @@ def read_historical_hours_and_fte_data(filename):
             ]
         )
 
-    return pd.concat(ret)
+    # Join all the tables and calculate the start date for each pay period number
+    df = pd.concat(ret)
+    df = add_pay_period_start_date(df)
+    return df
 
 
 def read_hours_and_fte_data(files):
@@ -475,7 +478,10 @@ def read_hours_and_fte_data(files):
             ]
         )
 
-    return pd.concat(ret)
+    # Join all the tables and calculate the start date for each pay period number
+    df = pd.concat(ret)
+    df = add_pay_period_start_date(df)
+    return df
 
 
 def add_pay_period_start_date(df):
@@ -553,25 +559,25 @@ def transform_hours_pay_periods_to_months(hours_df: pd.DataFrame):
             "prod_hrs",
             "nonprod_hrs",
             "total_hrs",
-            "total_fte",
         ]:
             # Multiply the pay period value by portion of the period in this month
             data_row[col] = data_row.get(col, 0) + df_row[col] * factor
 
-    # Hours data comes by pay period. Calculate a column with the first date of each
-    # row's pay period
-    df = add_pay_period_start_date(hours_df)
-    
+        # FTE has to be recalculated using a conversion factor of (14 days / days in month),
+        # because the FTE depends on the total hours / number of total days
+        days_in_month = calendar.monthrange(date.year, date.month)[1]
+        data_row["total_fte"] = data_row.get("total_fte", 0) + df_row["total_fte"] * factor * (14 / days_in_month)
+
     # Map the rows in the per-pay-period data to per-month rows
     data = {}
-    for _idx, df_row in df.iterrows():
+    for _idx, df_row in hours_df.iterrows():
         start_date = df_row["start_date"]
         end_date = start_date + timedelta(days=13)
 
         # Calculate the proportion of the pay period in the start_date month
         # monthrange() returns weekday of first day of the month and number of days in month
         days_in_start_month = calendar.monthrange(start_date.year, start_date.month)[1]
-        factor = (days_in_start_month - start_date.day + 1) / 14
+        factor = min(1.0, (days_in_start_month - start_date.day + 1) / 14)
 
         # Add values from data columns to the current row with index: (dept ID, month)
         copy_data_part(df_row, data, start_date, factor)

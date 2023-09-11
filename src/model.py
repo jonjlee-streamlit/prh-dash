@@ -57,6 +57,7 @@ class HoursByPayPeriod(Base):
     __tablename__ = "hours_by_pay_period"
     id = mapped_column(Integer, primary_key=True)
     pay_period = mapped_column(String(7), nullable=False)
+    start_date = mapped_column(DateTime)
     dept_wd_id = mapped_column(String(10), nullable=False)
     dept_name = mapped_column(String, nullable=True)
     reg_hrs = mapped_column(Float, nullable=False)
