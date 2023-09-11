@@ -42,6 +42,20 @@ class Budget(Base):
 class Hours(Base):
     __tablename__ = "hours"
     id = mapped_column(Integer, primary_key=True)
+    month = mapped_column(String(7), nullable=False)
+    dept_wd_id = mapped_column(String(10), nullable=False)
+    dept_name = mapped_column(String, nullable=True)
+    reg_hrs = mapped_column(Float, nullable=False)
+    overtime_hrs = mapped_column(Float, nullable=False)
+    prod_hrs = mapped_column(Float, nullable=False)
+    nonprod_hrs = mapped_column(Float, nullable=False)
+    total_hrs = mapped_column(Float, nullable=False)
+    total_fte = mapped_column(Float, nullable=False)
+
+
+class HoursByPayPeriod(Base):
+    __tablename__ = "hours_by_pay_period"
+    id = mapped_column(Integer, primary_key=True)
     pay_period = mapped_column(String(7), nullable=False)
     dept_wd_id = mapped_column(String(10), nullable=False)
     dept_name = mapped_column(String, nullable=True)

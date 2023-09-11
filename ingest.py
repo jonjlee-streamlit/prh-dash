@@ -2,6 +2,7 @@ import os
 import re
 import contextlib
 import logging
+import calendar
 import pandas as pd
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
@@ -13,6 +14,7 @@ from src.model import (
     Volume,
     Budget,
     Hours,
+    HoursByPayPeriod,
     IncomeStmt,
 )
 from src.source_data import DEFAULT_DB_FILE
@@ -476,9 +478,10 @@ def read_hours_and_fte_data(files):
     return pd.concat(ret)
 
 
-def pay_period_to_dates(df):
+def add_pay_period_start_date(df):
     """
-    Convert the pay_period column to start_date and end_date
+    Return a dataframe that adds a start_date column that translates the pay_period column
+    into the first day of the pay period
     """
 
     def find_start_date_of_first_pay_period_in_year(year):
@@ -499,24 +502,86 @@ def pay_period_to_dates(df):
                 return cur_date
             cur_date += timedelta(days=14)
 
-    # Calculate start dates for every pay period in the years found in data
+    # Get the year range of pay_period data
     min_year, _pp_num = map(int, df["pay_period"].min().split("-"))
     max_year, _pp_num = map(int, df["pay_period"].max().split("-"))
+
+    # Calculate start dates for every pay period in the year range found above
     pay_period_to_start_date = {}
     for year in range(min_year, max_year + 1):
         cur_date = find_start_date_of_first_pay_period_in_year(year)
         pay_period = 1
         while True:
+            # Pay date is the Friday following the end of the pay period
             pay_date = cur_date + timedelta(days=20)
+
+            # If the pay date is in a future year, we're done with this year
             if pay_date.year > year:
                 break
+
+            # Note the start date of this pay period and advanced 2 weeks to the next period
             pay_period_to_start_date[f"{year:04d}-{pay_period:02d}"] = cur_date
             cur_date += timedelta(days=14)
             pay_period += 1
 
+    # Make a copy of the data that includes a start_date column
     df = df.copy()
     df["start_date"] = df["pay_period"].map(pay_period_to_start_date)
     return df
+
+
+def transform_hours_pay_periods_to_months(hours_df: pd.DataFrame):
+    """
+    Translates hours data from pay periods in the format to the equivalent values by months
+    """
+    def copy_data_part(df_row, data, date, factor):
+        """
+        Copy column values from a data frame row, df_row, to a dict, data.
+        Values are multiplied by factor, which represents the part of the original data
+        that belongs to a particular year and month (specified by date).
+        """
+        month = f"{date.year:04d}-{date.month:02d}"
+        row_id = f"{df_row['dept_wd_id']}; {month}"
+        data[row_id] = data.get(row_id, {})
+        data_row = data[row_id]
+        data_row["month"] = month
+        data_row["dept_wd_id"] = df_row["dept_wd_id"]
+        data_row["dept_name"] = df_row["dept_name"]
+        for col in [
+            "reg_hrs",
+            "overtime_hrs",
+            "prod_hrs",
+            "nonprod_hrs",
+            "total_hrs",
+            "total_fte",
+        ]:
+            # Multiply the pay period value by portion of the period in this month
+            data_row[col] = data_row.get(col, 0) + df_row[col] * factor
+
+    # Hours data comes by pay period. Calculate a column with the first date of each
+    # row's pay period
+    df = add_pay_period_start_date(hours_df)
+    
+    # Map the rows in the per-pay-period data to per-month rows
+    data = {}
+    for _idx, df_row in df.iterrows():
+        start_date = df_row["start_date"]
+        end_date = start_date + timedelta(days=13)
+
+        # Calculate the proportion of the pay period in the start_date month
+        # monthrange() returns weekday of first day of the month and number of days in month
+        days_in_start_month = calendar.monthrange(start_date.year, start_date.month)[1]
+        factor = (days_in_start_month - start_date.day + 1) / 14
+
+        # Add values from data columns to the current row with index: (dept ID, month)
+        copy_data_part(df_row, data, start_date, factor)
+
+        # If the end month is different, then do the same thing with the rest of the pay period
+        if start_date.month != end_date.month:
+            copy_data_part(df_row, data, end_date, 1 - factor)
+
+    ret = pd.DataFrame(data).T
+    return ret.reset_index(drop=True)
 
 
 def clear_table_and_insert_data(session, table, df, df_column_order=None):
@@ -574,17 +639,18 @@ if __name__ == "__main__":
     budget_df = read_budget_data(VOLUMES_FILE, VOLUMES_BUDGET_SHEET)
     income_stmt_df = read_income_stmt_data(income_stmt_files)
     historical_hours_df = read_historical_hours_and_fte_data(HISTORICAL_HOURS_FILE)
-    hours_df = read_hours_and_fte_data(hours_files)
-    hours_df = pd.concat([historical_hours_df, hours_df])
+    hours_by_pay_period_df = read_hours_and_fte_data(hours_files)
+    hours_by_pay_period_df = pd.concat([historical_hours_df, hours_by_pay_period_df])
 
     # Transform hours data to months
-    df = pay_period_to_dates(hours_df)
+    hours_by_month_df = transform_hours_pay_periods_to_months(hours_by_pay_period_df)
 
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(db) as session:
         clear_table_and_insert_data(session, Volume, volumes_df)
         clear_table_and_insert_data(session, Budget, budget_df)
-        clear_table_and_insert_data(session, Hours, hours_df)
+        clear_table_and_insert_data(session, HoursByPayPeriod, hours_by_pay_period_df)
+        clear_table_and_insert_data(session, Hours, hours_by_month_df)
         clear_table_and_insert_data(session, IncomeStmt, income_stmt_df)
 
     # Update last ingest time and modified times for source data files
