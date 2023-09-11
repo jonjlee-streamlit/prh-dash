@@ -180,19 +180,19 @@ def _show_hours(settings: dict, data: data.DeptData):
 
     # Show graph of historical FTE. Allow user to select how many months to show.
     st.write("&nbsp;")
-    st.subheader("By Pay Period")
+    st.subheader("By Month")
 
-    # Select the pay period number
-    fte_period = st.selectbox(
-        key="fte_period",
-        label="Pay Period",
-        label_visibility="collapsed",
-        options=["Year to Date", "2 Years", "5 Years", "All Pay Periods"],
-    )
+    # Select the amount of historical data to display in months 
+    col1, col2, col_period = st.columns((7, 7, 3))
+    with col_period:
+        sel_period = st.selectbox(
+            label="Show",
+            key="hours_period",
+            label_visibility="collapsed",
+            options=["12 Months", "24 Months", "5 Years", "All"],
+        )
 
-    col1, col2 = st.columns(2)
-    df = data.hours
-    # df = _filter_pay_periods_by_desc(data.hours, fte_period)
+    df = _filter_by_period(data.hours, sel_period)
     with col1:
         figs.fte_fig(df, data.stats["budget_fte"])
     with col2:

@@ -116,6 +116,8 @@ def aggrid_income_stmt(df, month=None):
 
 
 def volumes_fig(df):
+    df = df.copy()
+    df.columns = ["Month", "Volume"]
     fig = px.bar(
         df,
         x=df.columns[0],
@@ -133,6 +135,9 @@ def volumes_fig(df):
     # Remove excessive top margin
     fig.update_layout(
         margin={"t": 0},
+        hovermode="x",
+        xaxis_title=None,
+        yaxis_title=None,
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -186,7 +191,7 @@ def hours_table(month, hours_for_month, hours_ytd):
 
 
 def fte_fig(src, budget_fte):
-    df = src[["month", "total_fte"]]
+    df = src[["month", "total_fte"]].copy()
     df = df.sort_values(by=["month"], ascending=[True])
     df.columns = ["Month", "FTE"]
     fig = px.bar(
@@ -213,16 +218,12 @@ def fte_fig(src, budget_fte):
         yshift=15,
     )
     # On hover text, show pay period number "2023 PP#1" and round y value to 1 decimal
-    fig.update_traces(
-        hovertemplate="<br>".join(
-            [
-                "%{x}",
-                "%{y:.1f} FTE",
-            ]
-        )
-    )
+    fig.update_traces(hovertemplate="%{y:.1f} FTE")
     fig.update_layout(
         margin={"t": 25},
+        hovermode="x unified",
+        xaxis={"tickformat": "%b %Y"},
+        xaxis_title=None,
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -231,25 +232,25 @@ def hours_fig(src):
     df = src[["month", "prod_hrs", "nonprod_hrs", "total_hrs"]].copy()
     df["prod_hrs"] = df["prod_hrs"] / df["total_hrs"]
     df["nonprod_hrs"] = df["nonprod_hrs"] / df["total_hrs"]
-    df.columns = ["Pay Period", "Productive", "Non-productive", "Total Hours"]
+    df.columns = ["Month", "Productive", "Non-productive", "Total Hours"]
     fig = px.bar(
         df,
         x=df.columns[0],
         y=[df.columns[1], df.columns[2]],
         text_auto=".1%",
     )
-    fig.update_yaxes(title_text="Hours")
-    fig.update_layout(legend_title_text="", yaxis={"tickformat": ",.1%"})
+    fig.update_yaxes(title_text="% of Hours")
+    fig.update_layout(
+        legend_title_text="",
+        xaxis_title=None,
+        xaxis={"tickformat": "%b %Y"},
+        yaxis={"tickformat": ",.1%"},
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
 
     # On hover text, show month and round y value to 1 decimal
-    fig.update_traces(
-        hovertemplate="<br>".join(
-            [
-                "%{x}",
-                "%{y:.1%}",
-            ]
-        )
-    )
+    fig.update_traces(hovertemplate="%{y:.1%}")
 
     # Remove excessive top margin
     fig.update_layout(

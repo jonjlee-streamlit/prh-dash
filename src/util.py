@@ -383,6 +383,10 @@ def period_str_to_month_strs(dates: str) -> typing.Tuple[str, str]:
         first_date = datetime(last_year, 1, 1)
         last_date = datetime(last_year, 12, 31)
         return dates_to_months(first_date, last_date)
+    elif dates == "6 months":
+        first_date = today - relativedelta(months=6)
+        first_date = first_date.replace(day=1)
+        return dates_to_months(first_date, today)
     elif dates == "12 months":
         first_date = datetime(today.year - 1, today.month, 1)
         return dates_to_months(first_date, today)
