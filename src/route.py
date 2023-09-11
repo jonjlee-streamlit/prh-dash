@@ -8,6 +8,7 @@ UPDATE = "update"
 
 # IDs for department dashboards
 ACUPUNCTURE = "acupuncture"
+ALL_CLINICS = "clinics"
 BEHAVIORAL_HEALTH = "bh"
 BIRTHPLACE = "birthplace"
 CARDIO_PULM_REHAB = "cardio_pulm_rehab"
@@ -58,6 +59,7 @@ DEPTS = (
     SURGERY,
     SURGICAL_SVC,
     UROLOGY,
+    ALL_CLINICS,
 )
 
 # IDs for API calls

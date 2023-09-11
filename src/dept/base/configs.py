@@ -59,6 +59,10 @@ DEPT_CONFIG = {
     route.SURGERY: DeptConfig("Pullman Surgical Associates", ["CC_72780"]),
     route.SURGICAL_SVC: DeptConfig("Surgical Services", ["CC_70200"]),
     route.UROLOGY: DeptConfig("Palouse Urology", ["CC_72750"]),
+    route.ALL_CLINICS: DeptConfig(
+        "Outpatient Clinics",
+        ["CC_72720", "CC_72770", "CC_72785", "CC_72745", "CC_72740", "CC_72750"],
+    ),
 }
 
 

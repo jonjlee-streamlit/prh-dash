@@ -198,7 +198,12 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
         if "name" in item and "items" in item:
             # A header row, like Revenue. Update the path, and recurse into child items
             cur_path = item["name"] if path == "" else f"{path}|{item['name']}"
-            ret.loc[len(ret)] = [cur_path, item["name"], None, None, None, None]
+            ret.loc[len(ret), :
+                    
+                    
+                    
+                    
+                    ] = [cur_path, item["name"], None, None, None, None]
             for sub_item in item["items"]:
                 process_item(sub_item, cur_path)
 
@@ -213,7 +218,7 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                 cur_path = f"{account}" if path == "" else f"{path}|{account}"
 
                 # Add a header row
-                ret.loc[len(ret)] = [cur_path, account, None, None, None, None]
+                ret.loc[len(ret), :] = [cur_path, account, None, None, None, None]
 
                 # Get list of categories, and recursively add data
                 unique_categories = set(
@@ -253,7 +258,7 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
 
                 # Add each matching row into the income statement
                 for _, row in rows.iterrows():
-                    ret.loc[len(ret)] = [
+                    ret.loc[len(ret), :] = [
                         cur_path,
                         account_text,
                         multiplier * row["actual"],
