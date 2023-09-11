@@ -230,27 +230,42 @@ def fte_fig(src, budget_fte):
 
 def hours_fig(src):
     df = src[["month", "prod_hrs", "nonprod_hrs", "total_hrs"]].copy()
-    df["prod_hrs"] = df["prod_hrs"] / df["total_hrs"]
-    df["nonprod_hrs"] = df["nonprod_hrs"] / df["total_hrs"]
-    df.columns = ["Month", "Productive", "Non-productive", "Total Hours"]
+    df.columns = [
+        "Month",
+        "Productive",
+        "Non-productive",
+        "Total",
+    ]
+
+    # Convert table with separate columns for prod vs non-prod to having a "Type" column
+    # ie [Month, Prod Hours, Nonprod Hours, Total] -> [Month, Hours, Type (Prod or Nonproc), Total]
+    df = df.melt(id_vars=["Month", "Total"], var_name="Type", value_name="Hours")
+
+    # Finally convert each row to a percent, which is what we'll actually graph
+    df["Percent"] = df["Hours"] / df["Total"]
+
+    # Stacked bar graph, one color for each unique value in Type (prod vs non-prod)
+    # Also pass the actual Hours in as customdata to use in the hovertemplate
     fig = px.bar(
         df,
-        x=df.columns[0],
-        y=[df.columns[1], df.columns[2]],
+        x="Month",
+        y="Percent",
+        color="Type",
         text_auto=".1%",
+        custom_data="Hours"
     )
-    fig.update_yaxes(title_text="% of Hours")
+    fig.update_yaxes(title_text="Hours")
     fig.update_layout(
         legend_title_text="",
-        xaxis_title=None,
-        xaxis={"tickformat": "%b %Y"},
+        xaxis_title=None, # Don't show x axis label
+        xaxis={"tickformat": "%b %Y"}, # X value still shows up in the hover text, so format it like "Jan 2023"
         yaxis={"tickformat": ",.1%"},
-        hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hovermode="x unified", # Hover text based on x position of mouse, and include values of both bars
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), # show legend horizontally on top right
     )
 
     # On hover text, show month and round y value to 1 decimal
-    fig.update_traces(hovertemplate="%{y:.1%}")
+    fig.update_traces(hovertemplate="%{customdata:.1f} hours (%{y:.1%})")
 
     # Remove excessive top margin
     fig.update_layout(
