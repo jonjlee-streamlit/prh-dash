@@ -218,10 +218,10 @@ def _calc_stats(
     # Pull the YTD Actual and YTD Budget totals for revenue and expenses
     # Those columns can change names, so index them as the second to last, or -2 column (YTD Actual),
     # and last, or -1 column (YTD Budget)
-    df_revenue = income_stmt_ytd[income_stmt_ytd["hier"] == "Net Revenue"]
+    df_revenue = income_stmt_ytd[income_stmt_ytd["hier"].str.startswith("Operating Revenue")].sum()
     df_expense = income_stmt_ytd[income_stmt_ytd["hier"] == "Total Operating Expenses"]
-    ytd_revenue = df_revenue.iloc[0, -2]
-    ytd_budget_revenue = df_revenue.iloc[0, -1]
+    ytd_revenue = df_revenue["YTD Actual"]
+    ytd_budget_revenue = df_revenue["YTD Budget"]
     ytd_expense = df_expense.iloc[0, -2]
     ytd_budget_expense = df_expense.iloc[0, -1]
 
