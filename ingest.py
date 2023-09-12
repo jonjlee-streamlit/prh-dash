@@ -54,7 +54,7 @@ HOURS_PATH = os.path.join(BASE_PATH, "PayPeriod")
 # Pay periods go from Saturday -> Friday two weeks later, and the pay date is on the Friday following the pay period.
 PAY_PERIOD_ANCHOR_DATE = {
     "year": 2023,
-    "start_date": datetime(2022, 12, 17),
+    "start_date": datetime(2022, 12, 31),
 }
 
 
@@ -499,12 +499,15 @@ def add_pay_period_start_date(df):
             while year <= cur_date.year:
                 cur_date += timedelta(days=-14)
 
-        # The pay date for a pay period is the Friday following the end of the pay period, which is 20 days
-        # from start_date. Walk forward from the anchor start_date 14 days at a time. Once the pay date is in the
-        # target year, we have the dates for the first pay period in that year.
+        # For accounting, find the first pay period that include at least one day in the year.  Walk forward from the anchor
+        # start_date 14 days at a time. Once the period end date (13 days from start date) is in the target year, we have
+        # the dates for the first pay period.
+        #
+        # This is different than pay roll pay periods, where pay period 1 is numbered to correspond to the first pay date
+        # in the year. The pay date for a pay period is the Friday following the end of the pay period
         while cur_date.year <= year:
-            pay_date = cur_date + timedelta(days=20)
-            if pay_date.year == year:
+            end_date = cur_date + timedelta(days=13)
+            if end_date.year == year:
                 return cur_date
             cur_date += timedelta(days=14)
 
@@ -518,11 +521,11 @@ def add_pay_period_start_date(df):
         cur_date = find_start_date_of_first_pay_period_in_year(year)
         pay_period = 1
         while True:
-            # Pay date is the Friday following the end of the pay period
-            pay_date = cur_date + timedelta(days=20)
+            # End date is the Friday 2 weeks from the start of the pay period
+            end_date = cur_date + timedelta(days=13)
 
             # If the pay date is in a future year, we're done with this year
-            if pay_date.year > year:
+            if end_date.year > year:
                 break
 
             # Note the start date of this pay period and advanced 2 weeks to the next period
@@ -540,6 +543,7 @@ def transform_hours_pay_periods_to_months(hours_df: pd.DataFrame):
     """
     Translates hours data from pay periods in the format to the equivalent values by months
     """
+
     def copy_data_part(df_row, data, date, factor):
         """
         Copy column values from a data frame row, df_row, to a dict, data.
@@ -566,7 +570,9 @@ def transform_hours_pay_periods_to_months(hours_df: pd.DataFrame):
         # FTE has to be recalculated using a conversion factor of (14 days / days in month),
         # because the FTE depends on the total hours / number of total days
         days_in_month = calendar.monthrange(date.year, date.month)[1]
-        data_row["total_fte"] = data_row.get("total_fte", 0) + df_row["total_fte"] * factor * (14 / days_in_month)
+        data_row["total_fte"] = data_row.get("total_fte", 0) + df_row[
+            "total_fte"
+        ] * factor * (14 / days_in_month)
 
     # Map the rows in the per-pay-period data to per-month rows
     data = {}
