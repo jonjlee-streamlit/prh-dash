@@ -202,7 +202,7 @@ def read_budget_data(filename, sheet):
         "budget_fte",
         "budget_hrs",
         "% Productive",
-        "Prod Hours",
+        "Budgeted Prod Hours",
         "budget_volume",
         "budget_hrs_per_volume",
         "",

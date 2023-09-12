@@ -55,7 +55,6 @@ def process(
     # Sort volume data by time
     volumes_df = src.volumes_df[src.volumes_df["dept_wd_id"].isin(wd_ids)]
     volumes = _calc_volumes_history(volumes_df)
-    latest_volume_month = volumes["month"].max()
 
     # Organize income statement data into a human readable table grouped into categories
     income_stmt_df = src.income_stmt_df[src.income_stmt_df["dept_wd_id"].isin(wd_ids)]
@@ -64,11 +63,10 @@ def process(
     hours_df = src.hours_df[src.hours_df["dept_wd_id"].isin(wd_ids)]
     hours_for_month = _calc_hours_for_month(hours_df, month)
     hours_ytm = _calc_hours_ytm(hours_df, month)
-    hours_ytd = _calc_hours_ytm(hours_df, latest_volume_month)
     hours_df = _calc_hours_history(hours_df)
 
     # Pre-calculate statistics that are individual numbers, like overall revenue per encounter
-    stats = _calc_stats(wd_ids, settings, src, volumes, hours_ytd, income_stmt_df)
+    stats = _calc_stats(wd_ids, settings, src, volumes, income_stmt_df, hours_df)
 
     return DeptData(
         dept=wd_ids,
@@ -168,11 +166,15 @@ def _calc_stats(
     settings: dict,
     src: source_data.SourceData,
     volumes: pd.DataFrame,  # volumes for each sub-department, all months
-    hours_ytd: pd.DataFrame,  # one row with total hours for all sub-departments
     income_stmt_df: pd.DataFrame,  # all income statment data for sub-departments, all months
+    hours: pd.DataFrame,  # prod/non-prod hours and FTE for each sub-department
 ) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
     s = {}
+
+    # Define the latest month that we will use for KPIs as the lastest month
+    # we have volume information for, since our org posts this last
+    month_max = volumes["month"].max()
 
     # Get the volume for the selected month and current year. The volumes table has
     # one number in the volume column for each department per month
@@ -201,27 +203,28 @@ def _calc_stats(
 
     # Hours data - table has one row per department with columns for types of hours,
     # eg. productive, non-productive, overtime, ...
+    hours_ytd = _calc_hours_ytm(hours, month_max)
     ytd_prod_hours = hours_ytd["prod_hrs"].sum()
     ytd_hours = hours_ytd["total_hrs"].sum()
 
-    # Get YTD revenue / expense data from the latest available income statement.
+    # Get YTD revenue / expense data from the income statement for month_max, where we have volume data.
     # The most straight-forward way to do this is to generate an actual income statement
     # because the income statement definition already defines all the line items to total
     # for revenue vs expenses.
     #
     # First, generate income statment for the latest month available in the data. The "month"
     # column is in the format "YYYY-MM".
-    latest_income_stmt_df = income_stmt_df[
-        income_stmt_df["month"] == income_stmt_df["month"].max()
-    ]
+    latest_income_stmt_df = income_stmt_df[income_stmt_df["month"] == month_max]
     income_stmt_ytd = income_statment.generate_income_stmt(latest_income_stmt_df)
     # Pull the YTD Actual and YTD Budget totals for revenue and expenses
     # Those columns can change names, so index them as the second to last, or -2 column (YTD Actual),
     # and last, or -1 column (YTD Budget)
-    df_revenue = income_stmt_ytd[income_stmt_ytd["hier"].str.startswith("Operating Revenue")].sum()
+    df_revenue = income_stmt_ytd[
+        income_stmt_ytd["hier"].str.startswith("Operating Revenue")
+    ].sum()
     df_expense = income_stmt_ytd[income_stmt_ytd["hier"] == "Total Operating Expenses"]
-    ytd_revenue = df_revenue["YTD Actual"]
-    ytd_budget_revenue = df_revenue["YTD Budget"]
+    ytd_revenue = df_revenue.iloc[-2]
+    ytd_budget_revenue = df_revenue.iloc[-1]
     ytd_expense = df_expense.iloc[0, -2]
     ytd_budget_expense = df_expense.iloc[0, -1]
 
