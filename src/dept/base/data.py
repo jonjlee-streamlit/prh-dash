@@ -230,7 +230,7 @@ def _calc_stats(
     # Those columns can change names, so index them as the second to last, or -2 column (YTD Actual),
     # and last, or -1 column (YTD Budget)
     df_revenue = income_stmt_ytd[
-        income_stmt_ytd["hier"].str.startswith("Operating Revenue")
+        income_stmt_ytd["hier"].str.startswith("Operating Revenues|Patient Revenues")
     ].sum()
     df_expense = income_stmt_ytd[income_stmt_ytd["hier"] == "Total Operating Expenses"]
     ytd_revenue = df_revenue.iloc[-2]

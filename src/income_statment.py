@@ -7,27 +7,32 @@ DEFAULT_INCOME_STATEMENT_DEF = [
         "name": "Operating Revenues",
         "items": [
             {
-                "name": "Inpatient",
+                "name": "Patient Revenues",
                 "items": [
                     {
-                        "account": "40000:Patient Revenues",
-                        "category": "Inpatient Revenue",
-                        "negative": True,
-                    }
-                ],
-            },
-            {
-                "name": "Outpatient",
-                "items": [
-                    {
-                        "account": "40000:Patient Revenues",
-                        "category": "Outpatient Revenue",
-                        "negative": True,
+                        "name": "Inpatient",
+                        "items": [
+                            {
+                                "account": "40000:Patient Revenues",
+                                "category": "Inpatient Revenue",
+                                "negative": True,
+                            }
+                        ],
                     },
                     {
-                        "account": "40000:Patient Revenues",
-                        "category": "Clinic Revenue",
-                        "negative": True,
+                        "name": "Outpatient",
+                        "items": [
+                            {
+                                "account": "40000:Patient Revenues",
+                                "category": "Outpatient Revenue",
+                                "negative": True,
+                            },
+                            {
+                                "account": "40000:Patient Revenues",
+                                "category": "Clinic Revenue",
+                                "negative": True,
+                            },
+                        ],
                     },
                 ],
             },
