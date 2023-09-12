@@ -175,6 +175,11 @@ def _calc_stats(
     # Define the latest month that we will use for KPIs as the lastest month
     # we have volume information for, since our org posts this last
     month_max = volumes["month"].max()
+    month_max = (
+        month_max
+        if not pd.isna(month_max)
+        else f"{date.today().year:04d}-{date.today().month:02d}"
+    )
 
     # Get the volume for the selected month and current year. The volumes table has
     # one number in the volume column for each department per month
@@ -268,7 +273,7 @@ def _calc_stats(
         s["target_expense_per_volume"] = 0
         s["variance_expense_per_volume"] = 0
 
-    s["hours_per_volume"] = ytd_prod_hours / ytd_volume
+    s["hours_per_volume"] = ytd_prod_hours / ytd_volume if ytd_volume > 0 else 0
     s["target_hours_per_volume"] = budget_df.at["budget_hrs_per_volume"]
     s["variance_hours_per_volume"] = (
         s["target_hours_per_volume"] - s["hours_per_volume"]
