@@ -61,7 +61,21 @@ DEPT_CONFIG = {
     route.UROLOGY: DeptConfig("Palouse Urology", ["CC_72750"]),
     route.ALL_CLINICS: DeptConfig(
         "Outpatient Clinics",
-        ["CC_72720", "CC_72770", "CC_72785", "CC_72745", "CC_72740", "CC_72750"],
+        [
+            "CC_74910",  # Family Residency
+            "CC_72800",  # Inland Ortho ID
+            "CC_72795",  # Inland Ortho WA
+            "CC_72775",  # Palouse Health Center
+            "CC_72790",  # Palouse Heart Center
+            "CC_72745",  # Palouse Peds ID
+            "CC_72740",  # Palouse Peds WA
+            "CC_72760",  # Palouse Psych & Behavioral Health
+            "CC_72785",  # Palouse Sleep
+            "CC_72750",  # Palouse Urology
+            "CC_72770",  # Pullman Family Med
+            "CC_72720",  # Pullman Foot & Ankle
+            "CC_72780",  # Pullman Surgical Assoc
+        ],
     ),
 }
 
