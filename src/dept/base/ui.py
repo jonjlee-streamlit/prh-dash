@@ -18,13 +18,13 @@ def show_settings(config: configs.DeptConfig, src_data: source_data.SourceData) 
             if id == "All"
             else static_data.WDID_TO_DEPT_NAME.get(id) or f"Unknown Department {id}"
         )
-    
+
     def enumerate_months(min_month, max_month):
-        min_month = datetime.strptime(min_month, '%Y-%m')
-        cur_month = datetime.strptime(max_month, '%Y-%m')
+        min_month = datetime.strptime(min_month, "%Y-%m")
+        cur_month = datetime.strptime(max_month, "%Y-%m")
         months = []
         while cur_month >= min_month:
-            months.append(cur_month.strftime('%Y-%m'))
+            months.append(cur_month.strftime("%Y-%m"))
             cur_month += relativedelta(months=-1)
         return months
 
@@ -115,7 +115,7 @@ def _show_kpi(settings: dict, data: data.DeptData):
         f"{s['variance_revenue_per_volume']}% {'above' if s['revenue_per_volume'] >= s['target_revenue_per_volume'] else 'below'} target",
     )
     col2.metric(
-        "Target Revenue per Exam", 
+        "Target Revenue per Exam",
         f"${s['target_revenue_per_volume']:,.0f}",
     )
 
@@ -152,7 +152,7 @@ def _show_volumes(settings: dict, data: data.DeptData):
     st.subheader("Summary")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(f"Month ({month})", f"{data.stats['month_volume']:,}")
-    col2.metric(f"Year to {month}", f"{data.stats['ytd_volume']:,}")
+    col2.metric(f"Year to {month}", f"{data.stats['ytm_volume']:,}")
 
     # Show graph of historical volumes. Allow user to select how many months to show.
     st.subheader("Volumes by Month")
@@ -174,15 +174,13 @@ def _show_hours(settings: dict, data: data.DeptData):
 
     # Show productive / non-productive hours for month
     st.subheader("Summary")
-    figs.hours_table(
-        data.month, data.hours_for_month, data.hours_ytm
-    )
+    figs.hours_table(data.month, data.hours_for_month, data.hours_ytm)
 
     # Show graph of historical FTE. Allow user to select how many months to show.
     st.write("&nbsp;")
     st.subheader("By Month")
 
-    # Select the amount of historical data to display in months 
+    # Select the amount of historical data to display in months
     col1, col2, col_period = st.columns((7, 7, 3))
     with col_period:
         sel_period = st.selectbox(
