@@ -36,12 +36,12 @@ DEFAULT_INCOME_STATEMENT_DEF = [
                 "items": [
                     {
                         "account": "40010:Sales Revenue",
-                        "category": "Cafeteria Sales",
+                        "category": "*",
                         "negative": True,
                     },
                     {
                         "account": "40300:Other Operating Revenue",
-                        "category": "Misc Revenue",
+                        "category": "*",
                         "negative": True,
                     },
                     {
@@ -198,12 +198,7 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
         if "name" in item and "items" in item:
             # A header row, like Revenue. Update the path, and recurse into child items
             cur_path = item["name"] if path == "" else f"{path}|{item['name']}"
-            ret.loc[len(ret), :
-                    
-                    
-                    
-                    
-                    ] = [cur_path, item["name"], None, None, None, None]
+            ret.loc[len(ret), :] = [cur_path, item["name"], None, None, None, None]
             for sub_item in item["items"]:
                 process_item(sub_item, cur_path)
 
@@ -227,7 +222,9 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
                     .unique()
                 )
                 for cat in sorted(unique_categories):
-                    process_item({"account": account, "category": cat}, cur_path)
+                    process_item(
+                        {"account": account, "category": cat, "negative": neg}, cur_path
+                    )
             else:
                 # For a specific account / category, update the current path and add all
                 # matching rows from the source data.
@@ -308,4 +305,14 @@ def generate_income_stmt(src_df, statement_def=DEFAULT_INCOME_STATEMENT_DEF):
     # Return a dataframe using the given income statement definition
     for item in statement_def:
         process_item(item, "")
+
+    # If there is more than one department in the data, then sum rows with the same Ledger Account.
+    # Sort=False to maintain row order as they originally appear.
+    if len(src_df["dept_wd_id"].unique()) > 0:
+        ret = (
+            ret.groupby(["hier", "Ledger Account"], sort=False, dropna=False)
+            .sum()
+            .reset_index()
+        )
+
     return ret
