@@ -91,7 +91,7 @@ def aggrid_income_stmt(df, month=None):
         type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
         aggFunc="sum",
         valueFormatter=JsCode(
-            "function(params) { return (params.value == null) ? params.value : params.value.toLocaleString('en-US', {style:'currency', currency:'USD'}) }"
+            "function(params) { return (params.value == null) ? params.value : params.value.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits: 0}) }"
         ),
     )
 
