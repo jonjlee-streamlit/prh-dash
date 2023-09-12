@@ -55,6 +55,7 @@ def process(
     # Sort volume data by time
     volumes_df = src.volumes_df[src.volumes_df["dept_wd_id"].isin(wd_ids)]
     volumes = _calc_volumes_history(volumes_df)
+    latest_volume_month = volumes["month"].max()
 
     # Organize income statement data into a human readable table grouped into categories
     income_stmt_df = src.income_stmt_df[src.income_stmt_df["dept_wd_id"].isin(wd_ids)]
@@ -63,7 +64,7 @@ def process(
     hours_df = src.hours_df[src.hours_df["dept_wd_id"].isin(wd_ids)]
     hours_for_month = _calc_hours_for_month(hours_df, month)
     hours_ytm = _calc_hours_ytm(hours_df, month)
-    hours_ytd = _calc_hours_ytm(hours_df, date.today().strftime("%Y-%m"))
+    hours_ytd = _calc_hours_ytm(hours_df, latest_volume_month)
     hours_df = _calc_hours_history(hours_df)
 
     # Pre-calculate statistics that are individual numbers, like overall revenue per encounter

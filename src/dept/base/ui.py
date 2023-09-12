@@ -133,9 +133,9 @@ def _show_kpi(settings: dict, data: data.DeptData):
 
     st.subheader("Productivity")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Hours per Exam", round(s["hours_per_volume"], 1))
-    col2.metric("Target Hours per Exam", round(s["target_hours_per_volume"], 1))
-    col1.metric("FTE Variance", round(s["fte_variance"], 1))
+    col1.metric("Hours per Exam", round(s["hours_per_volume"], 2))
+    col2.metric("Target Hours per Exam", round(s["target_hours_per_volume"], 2))
+    col1.metric("FTE Variance", round(s["fte_variance"], 2))
 
     v = round(s["fte_variance_dollars"])
     color = "rgb(255, 43, 43)" if v < 0 else "rgb(9, 171, 59)"
