@@ -91,7 +91,7 @@ def aggrid_income_stmt(df, month=None):
         type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
         aggFunc="sum",
         valueFormatter=JsCode(
-            "function(params) { return (params.value == null) ? params.value : params.value.toLocaleString('en-US', { maximumFractionDigits:2 }) }"
+            "function(params) { return (params.value == null) ? params.value : params.value.toLocaleString('en-US', {style:'currency', currency:'USD'}) }"
         ),
     )
 
@@ -130,7 +130,8 @@ def volumes_fig(df):
                 "%{x|%b %Y}",
                 "%{y} exams",
             ]
-        )
+        ),
+        texttemplate="%{text:,}",
     )
     # Remove excessive top margin
     fig.update_layout(
@@ -165,12 +166,12 @@ def hours_table(month, hours_for_month, hours_ytd):
     left_margin = 25
     styled_df = (
         df.style.hide(axis=0)
-        .format("{:.1f}", subset=df.columns[1:].tolist())
+        .format("{:,.0f}", subset=df.columns[1:].tolist())
         .set_table_styles(
             [
                 {"selector": "", "props": [("margin-left", str(left_margin) + "px")]},
                 {"selector": "tr", "props": [("border-top", "0px")]},
-                {"selector": "th, td", "props": [("border", "0px")]},
+                {"selector": "th, td", "props": [("border", "0px"), ("text-align", "right")]},
                 {"selector": "td", "props": [("padding", "3px 13px")]},
                 {
                     "selector": "td:nth-child(2), td:nth-child(3)",
@@ -218,7 +219,7 @@ def fte_fig(src, budget_fte):
         yshift=15,
     )
     # On hover text, show pay period number "2023 PP#1" and round y value to 1 decimal
-    fig.update_traces(hovertemplate="%{y:.1f} FTE")
+    fig.update_traces(hovertemplate="%{y:.1f} FTE", texttemplate="%{text:,.0f}")
     fig.update_layout(
         margin={"t": 25},
         hovermode="x unified",
@@ -247,25 +248,24 @@ def hours_fig(src):
     # Stacked bar graph, one color for each unique value in Type (prod vs non-prod)
     # Also pass the actual Hours in as customdata to use in the hovertemplate
     fig = px.bar(
-        df,
-        x="Month",
-        y="Percent",
-        color="Type",
-        text_auto=".1%",
-        custom_data="Hours"
+        df, x="Month", y="Percent", color="Type", text_auto=".1%", custom_data="Hours"
     )
     fig.update_yaxes(title_text="Hours")
     fig.update_layout(
         legend_title_text="",
-        xaxis_title=None, # Don't show x axis label
-        xaxis={"tickformat": "%b %Y"}, # X value still shows up in the hover text, so format it like "Jan 2023"
+        xaxis_title=None,  # Don't show x axis label
+        xaxis={
+            "tickformat": "%b %Y"
+        },  # X value still shows up in the hover text, so format it like "Jan 2023"
         yaxis={"tickformat": ",.1%"},
-        hovermode="x unified", # Hover text based on x position of mouse, and include values of both bars
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), # show legend horizontally on top right
+        hovermode="x unified",  # Hover text based on x position of mouse, and include values of both bars
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+        ),  # show legend horizontally on top right
     )
 
     # On hover text, show month and round y value to 1 decimal
-    fig.update_traces(hovertemplate="%{customdata:.1f} hours (%{y:.1%})")
+    fig.update_traces(hovertemplate="%{customdata:.1f} hours (%{y:.1%})", texttemplate="%{y:.0%}")
 
     # Remove excessive top margin
     fig.update_layout(

@@ -405,4 +405,4 @@ def period_str_to_month_strs(dates: str) -> typing.Tuple[str, str]:
 # -----------------------------------
 def format_finance(n):
     """Return a number formatted a finance amount - dollar sign, two decimal places, commas, negative values wrapped in parens"""
-    return "${0:,.2f}".format(n) if n >= 0 else "(${0:,.2f})".format(abs(n))
+    return "${0:,}".format(n) if n >= 0 else "(${0:,})".format(abs(n))

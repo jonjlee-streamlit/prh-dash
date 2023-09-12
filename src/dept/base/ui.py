@@ -111,37 +111,37 @@ def _show_kpi(settings: dict, data: data.DeptData):
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(
         "Revenue per Exam",
-        "$%s" % round(s["revenue_per_volume"]),
+        f"${s['revenue_per_volume']:,.0f}",
         f"{s['variance_revenue_per_volume']}% {'above' if s['revenue_per_volume'] >= s['target_revenue_per_volume'] else 'below'} target",
     )
     col2.metric(
-        "Target Revenue per Exam", "$%s" % round(s["target_revenue_per_volume"])
+        "Target Revenue per Exam", 
+        f"${s['target_revenue_per_volume']:,.0f}",
     )
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(
         "Expense per Encounter",
-        "$%s" % round(s["expense_per_volume"]),
+        f"${s['expense_per_volume']:,.0f}",
         delta=f"{s['variance_expense_per_volume']}% {'above' if s['expense_per_volume'] >= s['target_expense_per_volume'] else 'below'} target",
         delta_color="inverse",
     )
     col2.metric(
         "Target Expense per Encounter",
-        f"${round(s['target_expense_per_volume'])}",
+        f"${s['target_expense_per_volume']:,.0f}",
     )
 
     st.subheader("Productivity")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Hours per Exam", round(s["hours_per_volume"], 2))
-    col2.metric("Target Hours per Exam", round(s["target_hours_per_volume"], 2))
-    col1.metric("FTE Variance", round(s["fte_variance"], 2))
+    col1.metric("Hours per Exam", round(s["hours_per_volume"], 1))
+    col2.metric("Target Hours per Exam", round(s["target_hours_per_volume"], 1))
+    col1.metric("FTE Variance", round(s["fte_variance"], 1))
 
-    v = s["fte_variance_dollars"]
+    v = round(s["fte_variance_dollars"])
     color = "rgb(255, 43, 43)" if v < 0 else "rgb(9, 171, 59)"
     col2.markdown(
         "<p style='font-size:14px;'>Dollar Impact</p>"
-        + f"<p style='margin-top:-15px; font-size:2rem; color:{color}'>{util.format_finance(v)}</p>"
-        + f"<p style='margin-top:-15px; font-size:14px;'>using avg hourly rate $37.06</p>",
+        + f"<p style='margin-top:-15px; font-size:2rem; color:{color}'>{util.format_finance(v)}</p>",
         unsafe_allow_html=True,
     )
 
@@ -151,8 +151,8 @@ def _show_volumes(settings: dict, data: data.DeptData):
 
     st.subheader("Summary")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric(f"Month ({month})", data.stats["month_volume"])
-    col2.metric(f"Year to {month}", data.stats["ytd_volume"])
+    col1.metric(f"Month ({month})", f"{data.stats['month_volume']:,}")
+    col2.metric(f"Year to {month}", f"{data.stats['ytd_volume']:,}")
 
     # Show graph of historical volumes. Allow user to select how many months to show.
     st.subheader("Volumes by Month")
