@@ -200,11 +200,11 @@ def read_budget_data(filename, sheet):
         "dept_wd_id",
         "dept_name",
         "budget_fte",
-        "budget_hrs",
+        "Budgeted Hours",
         "% Productive",
-        "Budgeted Prod Hours",
+        "budget_prod_hrs",
         "budget_volume",
-        "budget_hrs_per_volume",
+        "budget_prod_hrs_per_volume",
         "",
         "hourly_rate",
         "Current YTD FTE",
@@ -220,9 +220,9 @@ def read_budget_data(filename, sheet):
             "dept_wd_id",
             "dept_name",
             "budget_fte",
-            "budget_hrs",
+            "budget_prod_hrs",
             "budget_volume",
-            "budget_hrs_per_volume",
+            "budget_prod_hrs_per_volume",
             "hourly_rate",
         ]
     ]
@@ -638,6 +638,7 @@ if __name__ == "__main__":
     # TODO: data verification
     # - VOLUMES_FILE, List worksheet: verify same data as static_data.WDID_TO_DEPTNAME
     # - Each income statement sheet has Ledger Account cell, and data in columns A:Q
+    # - hours and income data is present for the latest month we have volume data for
 
     # Create the empty temporary database file
     with contextlib.suppress(FileNotFoundError):

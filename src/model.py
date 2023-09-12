@@ -33,9 +33,9 @@ class Budget(Base):
     dept_wd_id = mapped_column(String(10), nullable=False)
     dept_name = mapped_column(String, nullable=True)
     budget_fte = mapped_column(Float, nullable=False)
-    budget_hrs = mapped_column(Integer, nullable=False)
+    budget_prod_hrs = mapped_column(Integer, nullable=False)
     budget_volume = mapped_column(Integer, nullable=False)
-    budget_hrs_per_volume = mapped_column(Float, nullable=False)
+    budget_prod_hrs_per_volume = mapped_column(Float, nullable=False)
     hourly_rate = mapped_column(Float, nullable=False)
 
 

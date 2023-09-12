@@ -199,12 +199,17 @@ def _calc_stats(
     budget_df = budget_df[
         [
             "budget_fte",
-            "budget_hrs",
+            "budget_prod_hrs",
             "budget_volume",
-            "budget_hrs_per_volume",
+            "budget_prod_hrs_per_volume",
             "hourly_rate",
         ]
     ].sum()
+    if len(wd_ids) > 1:
+        # If there is more than one department, recalculate hr/volume since it cannot just be summed across depts
+        budget_df["budget_prod_hrs_per_volume"] = (
+            budget_df["budget_prod_hrs"] / budget_df["budget_volume"]
+        )
 
     # Hours data - table has one row per department with columns for types of hours,
     # eg. productive, non-productive, overtime, ...
@@ -274,7 +279,7 @@ def _calc_stats(
         s["variance_expense_per_volume"] = 0
 
     s["hours_per_volume"] = ytd_prod_hours / ytd_volume if ytd_volume > 0 else 0
-    s["target_hours_per_volume"] = budget_df.at["budget_hrs_per_volume"]
+    s["target_hours_per_volume"] = budget_df.at["budget_prod_hrs_per_volume"]
     s["variance_hours_per_volume"] = (
         s["target_hours_per_volume"] - s["hours_per_volume"]
     )
