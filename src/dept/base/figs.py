@@ -91,7 +91,7 @@ def aggrid_income_stmt(df, month=None):
         type=["numericColumn", "numberColumnFilter", "customNumericFormat"],
         aggFunc="sum",
         valueFormatter=JsCode(
-            "function(params) { return (params.value == null) ? params.value : params.value.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits: 0}) }"
+            "function(params) { return (params.value == null) ? params.value : params.value.toLocaleString('en-US', {style:'currency', currency:'USD', currencySign: 'accounting', maximumFractionDigits: 0}) }"
         ),
     )
 
@@ -171,7 +171,10 @@ def hours_table(month, hours_for_month, hours_ytd):
             [
                 {"selector": "", "props": [("margin-left", str(left_margin) + "px")]},
                 {"selector": "tr", "props": [("border-top", "0px")]},
-                {"selector": "th, td", "props": [("border", "0px"), ("text-align", "right")]},
+                {
+                    "selector": "th, td",
+                    "props": [("border", "0px"), ("text-align", "right")],
+                },
                 {"selector": "td", "props": [("padding", "3px 13px")]},
                 {
                     "selector": "td:nth-child(2), td:nth-child(3)",
@@ -265,7 +268,9 @@ def hours_fig(src):
     )
 
     # On hover text, show month and round y value to 1 decimal
-    fig.update_traces(hovertemplate="%{customdata:.1f} hours (%{y:.1%})", texttemplate="%{y:.0%}")
+    fig.update_traces(
+        hovertemplate="%{customdata:.1f} hours (%{y:.1%})", texttemplate="%{y:.0%}"
+    )
 
     # Remove excessive top margin
     fig.update_layout(
