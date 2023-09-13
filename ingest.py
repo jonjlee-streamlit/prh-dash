@@ -86,11 +86,6 @@ def find_data_files(path, exclude=None):
     return sorted(ret)
 
 
-
-
-
-
-
 if __name__ == "__main__":
     # Sanity check data directory expected location and files
     if not sanity_check_data_dir():
@@ -122,23 +117,31 @@ if __name__ == "__main__":
     volumes_df = parse.read_volume_data(VOLUMES_FILE, VOLUMES_SHEET)
     budget_df = parse.read_budget_data(VOLUMES_FILE, VOLUMES_BUDGET_SHEET)
     income_stmt_df = parse.read_income_stmt_data(income_stmt_files)
-    historical_hours_df = parse.read_historical_hours_and_fte_data(HISTORICAL_HOURS_FILE, HISTORICAL_HOURS_YEAR)
+    historical_hours_df = parse.read_historical_hours_and_fte_data(
+        HISTORICAL_HOURS_FILE, HISTORICAL_HOURS_YEAR
+    )
     hours_by_pay_period_df = parse.read_hours_and_fte_data(hours_files)
     hours_by_pay_period_df = pd.concat([historical_hours_df, hours_by_pay_period_df])
 
     # Transform hours data to months
-    hours_by_month_df = transform.transform_hours_from_pay_periods_to_months(hours_by_pay_period_df)
+    hours_by_month_df = transform.transform_hours_from_pay_periods_to_months(
+        hours_by_pay_period_df
+    )
 
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(db_engine) as session:
         db.clear_table_and_insert_data(session, Volume, volumes_df)
         db.clear_table_and_insert_data(session, Budget, budget_df)
-        db.clear_table_and_insert_data(session, HoursByPayPeriod, hours_by_pay_period_df)
+        db.clear_table_and_insert_data(
+            session, HoursByPayPeriod, hours_by_pay_period_df
+        )
         db.clear_table_and_insert_data(session, Hours, hours_by_month_df)
         db.clear_table_and_insert_data(session, IncomeStmt, income_stmt_df)
 
     # Update last ingest time and modified times for source data files
-    modified = {file: datetime.fromtimestamp(os.path.getmtime(file)) for file in source_files}
+    modified = {
+        file: datetime.fromtimestamp(os.path.getmtime(file)) for file in source_files
+    }
     db.update_meta(db_engine, modified)
 
     # Move new database in place
