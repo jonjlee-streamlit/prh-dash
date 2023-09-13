@@ -58,12 +58,13 @@ def process(
 
     # Organize income statement data into a human readable table grouped into categories
     income_stmt_df = src.income_stmt_df[src.income_stmt_df["dept_wd_id"].isin(wd_ids)]
+    income_stmt = _calc_income_stmt_for_month(income_stmt_df, month)
 
     # Create summary tables for hours worked by month and year
     hours_df = src.hours_df[src.hours_df["dept_wd_id"].isin(wd_ids)]
+    hours = _calc_hours_history(hours_df)
     hours_for_month = _calc_hours_for_month(hours_df, month)
     hours_ytm = _calc_hours_ytm(hours_df, month)
-    hours_df = _calc_hours_history(hours_df)
 
     # Pre-calculate statistics that are individual numbers, like overall revenue per encounter
     stats = _calc_stats(wd_ids, settings, src, volumes, income_stmt_df, hours_df)
@@ -72,10 +73,10 @@ def process(
         dept=wd_ids,
         month=month,
         volumes=volumes,
-        hours=hours_df,
+        hours=hours,
         hours_for_month=hours_for_month,
         hours_ytm=hours_ytm,
-        income_stmt=income_stmt_df,
+        income_stmt=income_stmt,
         stats=stats,
     )
 
@@ -144,8 +145,6 @@ def _calc_hours_history(df: pd.DataFrame) -> pd.DataFrame:
     return df[
         [
             "month",
-            "reg_hrs",
-            "overtime_hrs",
             "prod_hrs",
             "nonprod_hrs",
             "total_hrs",
@@ -154,7 +153,7 @@ def _calc_hours_history(df: pd.DataFrame) -> pd.DataFrame:
     ]
 
 
-def calc_income_stmt_for_month(stmt: pd.DataFrame, month: str) -> pd.DataFrame:
+def _calc_income_stmt_for_month(stmt: pd.DataFrame, month: str) -> pd.DataFrame:
     # Filter data for given month
     stmt = stmt[stmt["month"] == month]
     ret = income_statment.generate_income_stmt(stmt)
@@ -180,18 +179,22 @@ def _calc_stats(
         if not pd.isna(month_max)
         else f"{date.today().year:04d}-{date.today().month:02d}"
     )
+    [month_max_year, month_max_month] = month_max.split("-")
 
     # Get the volume for the selected month and current year. The volumes table has
     # one number in the volume column for each department per month
     sel_month = settings["month"]
     sel_year = sel_month[:4]
-    cur_year = str(date.today().year)
     month_volume = volumes.loc[volumes["month"] == sel_month, "volume"].sum()
     ytm_volume = volumes.loc[
         volumes["month"].str.startswith(sel_year) & (volumes["month"] <= sel_month),
         "volume",
     ].sum()
-    ytd_volume = volumes.loc[volumes["month"].str.startswith(cur_year), "volume"].sum()
+    ytd_volume = volumes.loc[
+        volumes["month"].str.startswith(month_max_year)
+        & (volumes["month"] <= month_max),
+        "volume",
+    ].sum()
 
     # There is one budget row for each department. Sum them for overall budget,
     # and divide by the months in the year so far for the YTD volume and hours budgets.
@@ -210,6 +213,10 @@ def _calc_stats(
         budget_df["budget_prod_hrs_per_volume"] = (
             budget_df["budget_prod_hrs"] / budget_df["budget_volume"]
         )
+
+    # Get the YTD budgeted volume based on the proportion of the annual budgeted volume
+    # for the number of months of the year for which we have revenue / income statement information
+    ytd_budget_volume = budget_df.at["budget_volume"] * (int(month_max_month) / 12)
 
     # Hours data - table has one row per department with columns for types of hours,
     # eg. productive, non-productive, overtime, ...
@@ -237,19 +244,6 @@ def _calc_stats(
     ytd_budget_revenue = df_revenue.iloc[-1]
     ytd_expense = df_expense.iloc[0, -2]
     ytd_budget_expense = df_expense.iloc[0, -1]
-
-    # Get the YTD budgeted volume based on the proportion of the annual budgeted volume
-    # for the number of months of the year for which we have revenue / income statement information
-    [income_stmt_max_year, income_stmt_max_month] = (
-        income_stmt_df["month"].max().split("-")
-    )
-    if income_stmt_max_year == cur_year:
-        ytd_budget_volume = budget_df.at["budget_volume"] * (
-            int(income_stmt_max_month) / 12
-        )
-    else:
-        # No revenue data for current year yet, YTD budgets are all 0
-        ytd_budget_volume = 0
 
     # Volumes for the selected month and YTD show up on the Volumes tab, Summary section
     s["month_volume"] = month_volume

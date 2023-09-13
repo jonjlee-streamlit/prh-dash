@@ -242,7 +242,7 @@ def hours_fig(src):
     ]
 
     # Convert table with separate columns for prod vs non-prod to having a "Type" column
-    # ie [Month, Prod Hours, Nonprod Hours, Total] -> [Month, Hours, Type (Prod or Nonproc), Total]
+    # ie columns of [Month, Prod Hours, Nonprod Hours, Total] -> [Month, Hours, Type (Prod or Nonprod), Total]
     df = df.melt(id_vars=["Month", "Total"], var_name="Type", value_name="Hours")
 
     # Finally convert each row to a percent, which is what we'll actually graph

@@ -484,33 +484,33 @@ def read_hours_and_fte_data(files):
     return df
 
 
+def find_start_date_of_first_pay_period_in_year(year):
+    # If needed, walk the anchor date back by 2 weeks increments until anchor is in a prior to target year.
+    # PAY_PERIOD_ANCHOR_DATE["start_date"] is the start date of pay period #1 in the year PAY_PERIOD_ANCHOR_DATE["year"].
+    # It is likely a date in Dec of the previous year.
+    cur_date = PAY_PERIOD_ANCHOR_DATE["start_date"]
+    if year < PAY_PERIOD_ANCHOR_DATE["year"]:
+        while year <= cur_date.year:
+            cur_date += timedelta(days=-14)
+
+    # For accounting, find the first pay period that include at least one day in the year.  Walk forward from the anchor
+    # start_date 14 days at a time. Once the period end date (13 days from start date) is in the target year, we have
+    # the dates for the first pay period.
+    #
+    # This is different than pay roll pay periods, where pay period 1 is numbered to correspond to the first pay date
+    # in the year. The pay date for a pay period is the Friday following the end of the pay period
+    while cur_date.year <= year:
+        end_date = cur_date + timedelta(days=13)
+        if end_date.year == year:
+            return cur_date
+        cur_date += timedelta(days=14)
+
+
 def add_pay_period_start_date(df):
     """
     Return a dataframe that adds a start_date column that translates the pay_period column
     into the first day of the pay period
     """
-
-    def find_start_date_of_first_pay_period_in_year(year):
-        # If needed, walk the anchor date back by 2 weeks increments until anchor is in a prior to target year.
-        # PAY_PERIOD_ANCHOR_DATE["start_date"] is the start date of pay period #1 in the year PAY_PERIOD_ANCHOR_DATE["year"].
-        # It is likely a date in Dec of the previous year.
-        cur_date = PAY_PERIOD_ANCHOR_DATE["start_date"]
-        if year < PAY_PERIOD_ANCHOR_DATE["year"]:
-            while year <= cur_date.year:
-                cur_date += timedelta(days=-14)
-
-        # For accounting, find the first pay period that include at least one day in the year.  Walk forward from the anchor
-        # start_date 14 days at a time. Once the period end date (13 days from start date) is in the target year, we have
-        # the dates for the first pay period.
-        #
-        # This is different than pay roll pay periods, where pay period 1 is numbered to correspond to the first pay date
-        # in the year. The pay date for a pay period is the Friday following the end of the pay period
-        while cur_date.year <= year:
-            end_date = cur_date + timedelta(days=13)
-            if end_date.year == year:
-                return cur_date
-            cur_date += timedelta(days=14)
-
     # Get the year range of pay_period data
     min_year, _pp_num = map(int, df["pay_period"].min().split("-"))
     max_year, _pp_num = map(int, df["pay_period"].max().split("-"))
@@ -539,40 +539,41 @@ def add_pay_period_start_date(df):
     return df
 
 
-def transform_hours_pay_periods_to_months(hours_df: pd.DataFrame):
+def copy_fraction_of_hours_row(df_row, data, date, fraction):
+    """
+    Copy column values from a data frame row, df_row, to a dict, data.
+    Values are multiplied by factor, which represents the part of the original data
+    that belongs to a particular year and month (specified by date).
+    """
+    month = f"{date.year:04d}-{date.month:02d}"
+    row_id = f"{df_row['dept_wd_id']}; {month}"
+    data[row_id] = data.get(row_id, {})
+    data_row = data[row_id]
+    data_row["month"] = month
+    data_row["dept_wd_id"] = df_row["dept_wd_id"]
+    data_row["dept_name"] = df_row["dept_name"]
+    for col in [
+        "reg_hrs",
+        "overtime_hrs",
+        "prod_hrs",
+        "nonprod_hrs",
+        "total_hrs",
+    ]:
+        # Multiply the pay period value by portion of the period in this month
+        data_row[col] = data_row.get(col, 0) + df_row[col] * fraction
+
+    # FTE has to be recalculated using a conversion factor of (14 days / days in month),
+    # because the FTE depends on the total hours / number of total days
+    days_in_month = calendar.monthrange(date.year, date.month)[1]
+    data_row["total_fte"] = data_row.get("total_fte", 0) + df_row[
+        "total_fte"
+    ] * fraction * (14 / days_in_month)
+
+
+def transform_hours_from_pay_periods_to_months(hours_df: pd.DataFrame):
     """
     Translates hours data from pay periods in the format to the equivalent values by months
     """
-
-    def copy_data_part(df_row, data, date, factor):
-        """
-        Copy column values from a data frame row, df_row, to a dict, data.
-        Values are multiplied by factor, which represents the part of the original data
-        that belongs to a particular year and month (specified by date).
-        """
-        month = f"{date.year:04d}-{date.month:02d}"
-        row_id = f"{df_row['dept_wd_id']}; {month}"
-        data[row_id] = data.get(row_id, {})
-        data_row = data[row_id]
-        data_row["month"] = month
-        data_row["dept_wd_id"] = df_row["dept_wd_id"]
-        data_row["dept_name"] = df_row["dept_name"]
-        for col in [
-            "reg_hrs",
-            "overtime_hrs",
-            "prod_hrs",
-            "nonprod_hrs",
-            "total_hrs",
-        ]:
-            # Multiply the pay period value by portion of the period in this month
-            data_row[col] = data_row.get(col, 0) + df_row[col] * factor
-
-        # FTE has to be recalculated using a conversion factor of (14 days / days in month),
-        # because the FTE depends on the total hours / number of total days
-        days_in_month = calendar.monthrange(date.year, date.month)[1]
-        data_row["total_fte"] = data_row.get("total_fte", 0) + df_row[
-            "total_fte"
-        ] * factor * (14 / days_in_month)
 
     # Map the rows in the per-pay-period data to per-month rows
     data = {}
@@ -580,17 +581,17 @@ def transform_hours_pay_periods_to_months(hours_df: pd.DataFrame):
         start_date = df_row["start_date"]
         end_date = start_date + timedelta(days=13)
 
-        # Calculate the proportion of the pay period in the start_date month
+        # Calculate the fraction of the pay period in the start_date month
         # monthrange() returns weekday of first day of the month and number of days in month
         days_in_start_month = calendar.monthrange(start_date.year, start_date.month)[1]
-        factor = min(1.0, (days_in_start_month - start_date.day + 1) / 14)
+        fraction = min(1.0, (days_in_start_month - start_date.day + 1) / 14)
 
         # Add values from data columns to the current row with index: (dept ID, month)
-        copy_data_part(df_row, data, start_date, factor)
+        copy_fraction_of_hours_row(df_row, data, start_date, fraction)
 
         # If the end month is different, then do the same thing with the rest of the pay period
         if start_date.month != end_date.month:
-            copy_data_part(df_row, data, end_date, 1 - factor)
+            copy_fraction_of_hours_row(df_row, data, end_date, 1 - fraction)
 
     ret = pd.DataFrame(data).T
     return ret.reset_index(drop=True)
@@ -656,7 +657,7 @@ if __name__ == "__main__":
     hours_by_pay_period_df = pd.concat([historical_hours_df, hours_by_pay_period_df])
 
     # Transform hours data to months
-    hours_by_month_df = transform_hours_pay_periods_to_months(hours_by_pay_period_df)
+    hours_by_month_df = transform_hours_from_pay_periods_to_months(hours_by_pay_period_df)
 
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(db) as session:

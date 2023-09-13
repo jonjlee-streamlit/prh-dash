@@ -4,30 +4,12 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from . import configs, data, figs
 from ... import util, static_data, source_data
-from .data import calc_income_stmt_for_month
 
 
 def show_settings(config: configs.DeptConfig, src_data: source_data.SourceData) -> dict:
     """
     Render the sidebar and return the dict with configuration options set by the user.
     """
-
-    def dept_id_to_name(id):
-        return (
-            id
-            if id == "All"
-            else static_data.WDID_TO_DEPT_NAME.get(id) or f"Unknown Department {id}"
-        )
-
-    def enumerate_months(min_month, max_month):
-        min_month = datetime.strptime(min_month, "%Y-%m")
-        cur_month = datetime.strptime(max_month, "%Y-%m")
-        months = []
-        while cur_month >= min_month:
-            months.append(cur_month.strftime("%Y-%m"))
-            cur_month += relativedelta(months=-1)
-        return months
-
     with st.sidebar:
         util.st_sidebar_prh_logo()
 
@@ -35,7 +17,7 @@ def show_settings(config: configs.DeptConfig, src_data: source_data.SourceData) 
             dept_id = st.selectbox(
                 "Department",
                 options=["All"] + config.wd_ids,
-                format_func=dept_id_to_name,
+                format_func=_dept_name,
             )
         else:
             dept_id = config.wd_ids[0]
@@ -53,7 +35,7 @@ def show_settings(config: configs.DeptConfig, src_data: source_data.SourceData) 
         )
         month = st.selectbox(
             label="Month",
-            options=enumerate_months(min_month, max_month),
+            options=_enumerate_months(min_month, max_month),
             format_func=lambda m: datetime.strptime(m, "%Y-%m").strftime("%b %Y"),
         )
 
@@ -69,16 +51,7 @@ def show_settings(config: configs.DeptConfig, src_data: source_data.SourceData) 
             )
         )
 
-    return {"dept_id": dept_id, "dept_name": dept_id_to_name(dept_id), "month": month}
-
-
-def _prev_months(n_months):
-    """
-    Return the last n_months in a format like ["2022-12", "2022-11", ...]
-    """
-    ret = [datetime.now() - relativedelta(months=i + 1) for i in range(n_months)]
-    ret = [m.strftime("%Y-%m") for m in ret]
-    return ret
+    return {"dept_id": dept_id, "month": month}
 
 
 def show(config: configs.DeptConfig, settings: dict, data: data.DeptData):
@@ -89,7 +62,7 @@ def show(config: configs.DeptConfig, settings: dict, data: data.DeptData):
 
     # Title with department name and sub-department. e.g. "Imaging - CT"
     if len(config.wd_ids) > 1:
-        st.title(f"{config.name} · {settings['dept_name']}")
+        st.title(f"{config.name} · {_dept_name(settings['dept_id'])}")
     else:
         st.title(f"{config.name}")
 
@@ -160,6 +133,7 @@ def _show_volumes(settings: dict, data: data.DeptData):
     with col_period:
         volumes_period = st.selectbox(
             label="Show",
+            key="volume_period",
             label_visibility="collapsed",
             options=["12 Months", "24 Months", "5 Years", "All"],
         )
@@ -198,8 +172,23 @@ def _show_hours(settings: dict, data: data.DeptData):
 
 
 def _show_income_stmt(settings: dict, data: data.DeptData):
-    income_stmt = calc_income_stmt_for_month(data.income_stmt, settings["month"])
-    figs.aggrid_income_stmt(income_stmt, settings["month"])
+    figs.aggrid_income_stmt(data.income_stmt, settings["month"])
+
+
+def _dept_name(id):
+    if id == "All":
+        return id
+    return static_data.WDID_TO_DEPT_NAME.get(id, f"Unknown Department {id}")
+
+
+def _enumerate_months(min_month, max_month):
+    min_month = datetime.strptime(min_month, "%Y-%m")
+    cur_month = datetime.strptime(max_month, "%Y-%m")
+    months = []
+    while cur_month >= min_month:
+        months.append(cur_month.strftime("%Y-%m"))
+        cur_month += relativedelta(months=-1)
+    return months
 
 
 def _filter_by_period(df, period_str, col="month"):
@@ -214,14 +203,3 @@ def _filter_by_period(df, period_str, col="month"):
     if last_month:
         df = df[df.loc[:, col] <= last_month]
     return df
-
-
-def _filter_pay_periods_by_desc(df, period_str):
-    if period_str == "All Pay Periods":
-        return df
-    if period_str == "Year to Date":
-        return df[df["pay_period"] >= f"{datetime.today().year}-01"]
-    if period_str == "2 Years":
-        return df[df["pay_period"] >= f"{datetime.today().year-1}-01"]
-    if period_str == "5 Years":
-        return df[df["pay_period"] >= f"{datetime.today().year-4}-01"]
