@@ -245,10 +245,12 @@ def _calc_stats(
     ytd_expense = df_expense.iloc[0, -2]
     ytd_budget_expense = df_expense.iloc[0, -1]
 
-    # Volumes for the selected month and YTD show up on the Volumes tab, Summary section
+    # Volumes and budgets for the selected month and YTD show up on the Volumes tab, Summary section
     s["month_volume"] = month_volume
     s["ytm_volume"] = ytm_volume
     s["ytd_volume"] = ytd_volume
+    s["month_budget_volume"] = budget_df.at["budget_volume"] / 12
+    s["ytm_budget_volume"] = budget_df.at["budget_volume"] * (int(sel_month[-2:]) / 12)
 
     # Budgeted FTE shows up as a threshold line on the FTE graph
     s["budget_fte"] = budget_df.at["budget_fte"]

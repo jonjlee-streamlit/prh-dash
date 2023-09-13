@@ -125,7 +125,11 @@ def _show_volumes(settings: dict, data: data.DeptData):
     st.subheader("Summary")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(f"Month ({month})", f"{data.stats['month_volume']:,}")
-    col2.metric(f"Year to {month}", f"{data.stats['ytm_volume']:,}")
+    col2.metric(f"Target for Month", f"{data.stats['month_budget_volume']:,.0f}")
+    col1.metric(f"Year to {month}", f"{data.stats['ytm_volume']:,}")
+    col2.metric(
+        f"Target for Year to {month}", f"{data.stats['ytm_budget_volume']:,.0f}"
+    )
 
     # Show graph of historical volumes. Allow user to select how many months to show.
     st.subheader("Volumes by Month")
