@@ -47,10 +47,7 @@ def process(
     )
 
     # Get department IDs that we will be matching
-    if dept_id == "All":
-        wd_ids = config.wd_ids
-    else:
-        wd_ids = [dept_id]
+    wd_ids = _get_all_wd_ids(config if dept_id == "All" else dept_id)
 
     # Sort volume data by time
     volumes_df = src.volumes_df[src.volumes_df["dept_wd_id"].isin(wd_ids)]
@@ -79,6 +76,24 @@ def process(
         income_stmt=income_stmt,
         stats=stats,
     )
+
+
+def _get_all_wd_ids(id_list):
+    """Recursively find all ID strings in a mixed list of IDs and DeptConfig objects"""
+    if isinstance(id_list, str):
+        # ID is just one string, return it as single element in list
+        return [id_list]
+    elif isinstance(id_list, DeptConfig):
+        return _get_all_wd_ids(id_list.wd_ids)
+    else:
+        # Return all strings in wd_ids and recurse into any embedded DeptConfigs
+        ret = []
+        for id in id_list:
+            if isinstance(id, DeptConfig):
+                ret += _get_all_wd_ids(id.wd_ids)
+            else:
+                ret.append(id)
+        return ret
 
 
 def _calc_volumes_history(df: pd.DataFrame) -> pd.DataFrame:

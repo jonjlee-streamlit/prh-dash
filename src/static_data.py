@@ -7,6 +7,7 @@ FTE_HOURS_PER_DAY = FTE_HOURS_PER_YEAR / 365
 
 # Map of Workday IDs to the canonical department or cost center name
 WDID_TO_DEPT_NAME = {
+    "CT/Imaging": "CT/Imaging",  # custom, non-workday ID used in Excel spreadsheet
     "CC_71750": "340B",
     "CC_72045": "Acupuncture",
     "CC_86000": "Administration",
@@ -142,6 +143,7 @@ ALIASES_TO_WDID = {
     "Contractual Adjustments": "CC_58200",
     "CT Scan": "CC_71300",
     "PRH CT SCAN": "CC_71300",
+    "CT/Imaging": "CT/Imaging",
     "Depreciation": "CC_88000",
     "discounts & rebates": "CC_89000",
     "EKG Services": "CC_71110",

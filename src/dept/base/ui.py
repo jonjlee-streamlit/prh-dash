@@ -179,10 +179,12 @@ def _show_income_stmt(settings: dict, data: data.DeptData):
     figs.aggrid_income_stmt(data.income_stmt, settings["month"])
 
 
-def _dept_name(id):
-    if id == "All":
-        return id
-    return static_data.WDID_TO_DEPT_NAME.get(id, f"Unknown Department {id}")
+def _dept_name(key):
+    if key == "All":
+        return key
+    if hasattr(key, "name"):
+        return key.name
+    return static_data.WDID_TO_DEPT_NAME.get(key, f"Unknown Department {key}")
 
 
 def _enumerate_months(min_month, max_month):

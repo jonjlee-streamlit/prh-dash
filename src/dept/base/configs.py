@@ -26,9 +26,14 @@ DEPT_CONFIG = {
     route.IMAGING: DeptConfig(
         "Imaging",
         [
-            "CC_71300",  # CT
+            DeptConfig(
+                "CT/Imaging",
+                [
+                    "CC_71300",  # CT
+                    "CC_71400",  # Imaging Services
+                ],
+            ),
             "CC_71200",  # MRI
-            "CC_71400",  # Imaging Services
             "CC_71430",  # Ultrasound
             "CC_71600",  # NM / PET
             "CC_71450",  # Mammography
