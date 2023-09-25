@@ -224,10 +224,11 @@ def _calc_stats(
         ]
     ].sum()
     if len(wd_ids) > 1:
-        # If there is more than one department, recalculate hr/volume since it cannot just be summed across depts
+        # If there is more than one department, recalculate values that cannot just be summed across depts
         budget_df["budget_prod_hrs_per_volume"] = (
             budget_df["budget_prod_hrs"] / budget_df["budget_volume"]
         )
+        budget_df["hourly_rate"] = budget_df["hourly_rate"] / len(wd_ids)
 
     # Get the YTD budgeted volume based on the proportion of the annual budgeted volume
     # for the number of months of the year for which we have revenue / income statement information
