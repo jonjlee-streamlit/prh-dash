@@ -13,7 +13,7 @@ from src.model import (
     IncomeStmt,
 )
 from src.source_data import DEFAULT_DB_FILE
-from src.ingest import db, parse, transform
+from src.ingest import db, parse, transform, sanity
 
 # Logging definitions
 logging.basicConfig(level=logging.INFO)
@@ -45,22 +45,22 @@ HISTORICAL_HOURS_FILE = os.path.join(
 HOURS_PATH = os.path.join(BASE_PATH, "PayPeriod")
 
 
-def sanity_check_data_dir():
+def sanity_check_data_dir(base_path, volumes_file, income_stmt_path, hours_path):
     """
     Sanity checks for data directory
     """
     error = None
-    if not os.path.isdir(BASE_PATH):
-        error = f"ERROR: data directory path does not exist: {BASE_PATH}"
-    if not os.path.isfile(VOLUMES_FILE):
-        error = f"ERROR: volumes data file is missing: {VOLUMES_FILE}"
+    if not os.path.isdir(base_path):
+        error = f"ERROR: data directory path does not exist: {base_path}"
+    if not os.path.isfile(volumes_file):
+        error = f"ERROR: volumes data file is missing: {volumes_file}"
     if (
-        not os.path.isdir(INCOME_STMT_PATH)
-        or len(find_data_files(INCOME_STMT_PATH)) == 0
+        not os.path.isdir(income_stmt_path)
+        or len(find_data_files(income_stmt_path)) == 0
     ):
-        error = f"ERROR: income statements root directory is empty: {INCOME_STMT_PATH}"
-    if not os.path.isdir(HOURS_PATH) or len(find_data_files(HOURS_PATH)) == 0:
-        error = f"ERROR: productivity data root directory is empty: {HOURS_PATH}"
+        error = f"ERROR: income statements root directory is empty: {income_stmt_path}"
+    if not os.path.isdir(hours_path) or len(find_data_files(hours_path)) == 0:
+        error = f"ERROR: productivity data root directory is empty: {hours_path}"
 
     if error is not None:
         print(error)
@@ -88,7 +88,7 @@ def find_data_files(path, exclude=None):
 
 if __name__ == "__main__":
     # Sanity check data directory expected location and files
-    if not sanity_check_data_dir():
+    if not sanity_check_data_dir(BASE_PATH, VOLUMES_FILE, INCOME_STMT_PATH, HOURS_PATH):
         logging.error("ERROR: data directory error (see above). Terminating.")
         exit(1)
 
@@ -105,6 +105,10 @@ if __name__ == "__main__":
     # - VOLUMES_FILE, List worksheet: verify same data as static_data.WDID_TO_DEPTNAME
     # - Each income statement sheet has Ledger Account cell, and data in columns A:Q
     # - hours and income data is present for the latest month we have volume data for
+    # - fte, volumes should all be non-negative. Hours can be negative for adjustments
+    if not sanity.check_data_files(VOLUMES_FILE, income_stmt_files):
+        logging.error("ERROR: data files sanity check failed (see above).")
+        exit(1)
 
     # Create the empty temporary database file
     with contextlib.suppress(FileNotFoundError):
