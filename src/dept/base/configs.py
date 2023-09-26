@@ -68,12 +68,22 @@ DEPT_CONFIG = {
         "Outpatient Clinics",
         [
             "CC_74910",  # Family Residency
-            "CC_72800",  # Inland Ortho ID
-            "CC_72795",  # Inland Ortho WA
+            DeptConfig(
+                "Inland Orthopedics",
+                [
+                    "CC_72800",  # Inland Ortho ID
+                    "CC_72795",  # Inland Ortho WA
+                ],
+            ),
             "CC_72775",  # Palouse Health Center
             "CC_72790",  # Palouse Heart Center
-            "CC_72745",  # Palouse Peds ID
-            "CC_72740",  # Palouse Peds WA
+            DeptConfig(
+                "Palouse Pediatrics",
+                [
+                    "CC_72745",  # Palouse Peds ID
+                    "CC_72740",  # Palouse Peds WA
+                ],
+            ),
             "CC_72760",  # Palouse Psych & Behavioral Health
             "CC_72785",  # Palouse Sleep
             "CC_72750",  # Palouse Urology
