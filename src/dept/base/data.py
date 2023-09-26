@@ -228,6 +228,8 @@ def _calc_stats(
         budget_df["budget_prod_hrs_per_volume"] = (
             budget_df["budget_prod_hrs"] / budget_df["budget_volume"]
         )
+        # Calculate average of hourly rates - this is not entirely accurate, since pay/hours are not distributed
+        # evenly across departments. When possible, this will be recalulated below using (YTD salary / YTD hours)
         budget_df["hourly_rate"] = budget_df["hourly_rate"] / len(wd_ids)
 
     # Get the YTD budgeted volume based on the proportion of the annual budgeted volume
@@ -240,7 +242,7 @@ def _calc_stats(
     ytd_prod_hours = hours_ytd["prod_hrs"].sum()
     ytd_hours = hours_ytd["total_hrs"].sum()
 
-    # Get YTD revenue / expense data from the income statement for month_max, where we have volume data.
+    # Get YTD revenue, expense, and salary data from the income statement for month_max, where we have volume data.
     # The most straight-forward way to do this is to generate an actual income statement
     # because the income statement definition already defines all the line items to total
     # for revenue vs expenses.
@@ -256,10 +258,14 @@ def _calc_stats(
         income_stmt_ytd["hier"].str.startswith("Operating Revenues|Patient Revenues")
     ].sum()
     df_expense = income_stmt_ytd[income_stmt_ytd["hier"] == "Total Operating Expenses"]
+    df_salary = income_stmt_ytd[
+        income_stmt_ytd["hier"].str.startswith("Expenses|Salaries")
+    ].sum()
     ytd_revenue = df_revenue.iloc[-2]
     ytd_budget_revenue = df_revenue.iloc[-1]
     ytd_expense = df_expense.iloc[0, -2]
     ytd_budget_expense = df_expense.iloc[0, -1]
+    ytd_salary = df_salary.iloc[-2]
 
     # Volumes and budgets for the selected month and YTD show up on the Volumes tab, Summary section
     s["month_volume"] = month_volume
@@ -296,11 +302,13 @@ def _calc_stats(
         s["target_hours_per_volume"] - s["hours_per_volume"]
     )
     if ytd_hours:
+        # prefer to calculate hourly rate directly vs using data from Dashboard Supporting Data
+        s["hourly_rate"] = ytd_salary / ytd_hours
         s["fte_variance"] = (s["variance_hours_per_volume"] * ytd_volume) / (
             static_data.FTE_HOURS_PER_YEAR * (ytd_prod_hours / ytd_hours)
         )
         s["fte_variance_dollars"] = (
-            s["variance_hours_per_volume"] * ytd_volume * budget_df.at["hourly_rate"]
+            s["variance_hours_per_volume"] * ytd_volume * s["hourly_rate"]
         )
     else:
         s["fte_variance"] = 0
