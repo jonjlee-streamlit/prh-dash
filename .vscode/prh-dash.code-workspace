@@ -9,6 +9,9 @@
     "python.testing.pytestArgs": ["test"],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "sqlite.recordsPerPage": 1000
-  }
+    "sqlite.recordsPerPage": 1000,
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+      },
+    }
 }
