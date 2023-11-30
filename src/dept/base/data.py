@@ -132,10 +132,11 @@ def _calc_hours_ytm(df: pd.DataFrame, month: str) -> pd.DataFrame:
     Return a dataframe with a single row containing the sum of the productive/non-productive hours across all departments for this year
     """
     # Filter all rows that are in the same year and come before the given month
-    year = month[:4]
-    df = df[df["month"].str.startswith(year) & (df["month"] <= month)]
+    [year_num, month_num] = month.split('-')
+    df = df[df["month"].str.startswith(year_num) & (df["month"] <= month)]
 
-    # Sum all rows. Return columns that are displayed in the FTE tab summary table.
+    # Sum all rows, except FTE. Return columns that are displayed in the FTE tab summary table.
+    # FTE needs to be recalculated based on the month number in the year.
     columns = [
         "reg_hrs",
         "overtime_hrs",
@@ -146,7 +147,9 @@ def _calc_hours_ytm(df: pd.DataFrame, month: str) -> pd.DataFrame:
     ]
     if df.shape[0] > 0:
         df = df[columns]
-        return df.sum()
+        ret = df.sum()
+        ret["total_fte"] = ret["total_hrs"] / (static_data.FTE_HOURS_PER_YEAR * (int(month_num) / 12))
+        return ret
     else:
         return pd.DataFrame(columns=columns)
 
