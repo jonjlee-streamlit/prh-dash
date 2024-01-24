@@ -20,7 +20,7 @@ def read_volume_data(filename, sheet):
     # Read tables from excel worksheet
     logging.info(f"Reading {filename}, {sheet}")
     xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
-    volumes_by_year = util.df_get_tables_by_columns(xl_data, "1:68")
+    volumes_by_year = util.df_get_tables_by_columns(xl_data, "1:70")
 
     # Convert from multiple tables:
     #            2022
@@ -35,7 +35,12 @@ def read_volume_data(filename, sheet):
 
     data = []
     for df in volumes_by_year:
-        year = util.df_get_val_or_range(df, "C1")
+        # The first table has an extra column for the volume units (eg Patient Days or Tests). The remainder do not.
+        # Look for year in row 2, column 3. If it's not there, then we have an extra column
+        year_row, year_col = 0, 2
+        col_offset = 0 if pd.notna(df.iloc[year_row, year_col]) else 1
+        year = df.iloc[year_row, year_col + col_offset]
+        assert(pd.notna(year))
 
         # Skip header rows x 2 with year and month names
         df = df.iloc[2:]
@@ -47,7 +52,7 @@ def read_volume_data(filename, sheet):
             dept_name = row.iloc[1]
 
             # Iterate over volume numbers in columns C:N. enumerate(..., start=1) results in month = [1..12]
-            volumes = row.iloc[2 : 2 + 12]
+            volumes = row.iloc[2 + col_offset : 2 + col_offset + 12]
             for month_num, volume in enumerate(volumes, start=1):
                 if pd.notnull(volume):
                     # Format month column like "2022-01"
