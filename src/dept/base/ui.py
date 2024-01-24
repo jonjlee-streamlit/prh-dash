@@ -28,7 +28,7 @@ def show_settings(config: configs.DeptConfig, src_data: source_data.SourceData) 
             src_data.hours_df["month"].min(),
             src_data.income_stmt_df["month"].min(),
         )
-        max_month = max(
+        max_month = min(
             src_data.volumes_df["month"].max(),
             src_data.hours_df["month"].max(),
             src_data.income_stmt_df["month"].max(),
@@ -67,7 +67,12 @@ def show(config: configs.DeptConfig, settings: dict, data: data.DeptData):
         st.title(f"{config.name}")
 
     # Main content
-    st.header("Key Performance Indicators (YTD)", anchor="kpis", divider="gray")
+    kpi_month_str = datetime.strptime(s["kpi_month_max"], "%Y-%m").strftime("%b %Y")
+    st.header(
+        f"Key Performance Indicators, Year to {kpi_month_str}",
+        anchor="kpis",
+        divider="gray",
+    )
     _show_kpi(settings, data)
     st.header("Volumes", anchor="volumes", divider="gray")
     _show_volumes(settings, data)

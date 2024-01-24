@@ -132,7 +132,7 @@ def _calc_hours_ytm(df: pd.DataFrame, month: str) -> pd.DataFrame:
     Return a dataframe with a single row containing the sum of the productive/non-productive hours across all departments for this year
     """
     # Filter all rows that are in the same year and come before the given month
-    [year_num, month_num] = month.split('-')
+    [year_num, month_num] = month.split("-")
     df = df[df["month"].str.startswith(year_num) & (df["month"] <= month)]
 
     # Sum all rows, except FTE. Return columns that are displayed in the FTE tab summary table.
@@ -148,7 +148,9 @@ def _calc_hours_ytm(df: pd.DataFrame, month: str) -> pd.DataFrame:
     if df.shape[0] > 0:
         df = df[columns]
         ret = df.sum()
-        ret["total_fte"] = ret["total_hrs"] / (static_data.FTE_HOURS_PER_YEAR * (int(month_num) / 12))
+        ret["total_fte"] = ret["total_hrs"] / (
+            static_data.FTE_HOURS_PER_YEAR * (int(month_num) / 12)
+        )
         return ret
     else:
         return pd.DataFrame(columns=columns)
@@ -190,8 +192,8 @@ def _calc_stats(
     s = {}
 
     # Define the latest month that we will use for KPIs as the lastest month
-    # we have volume information for, since our org posts this last
-    month_max = volumes["month"].max()
+    # we have both volume and income information for
+    month_max = min(volumes["month"].max(), income_stmt_df["month"].max())
     month_max = (
         month_max
         if not pd.isna(month_max)
@@ -271,6 +273,7 @@ def _calc_stats(
     ytd_salary = df_salary.iloc[-2]
 
     # Volumes and budgets for the selected month and YTD show up on the Volumes tab, Summary section
+    s["kpi_month_max"] = month_max
     s["month_volume"] = month_volume
     s["ytm_volume"] = ytm_volume
     s["ytd_volume"] = ytd_volume
