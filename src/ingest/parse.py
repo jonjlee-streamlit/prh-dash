@@ -52,6 +52,8 @@ def read_volume_data(filename, sheet):
             dept_name = row.iloc[1]
 
             # Iterate over volume numbers in columns C:N. enumerate(..., start=1) results in month = [1..12]
+            # Most tables have two non-data columns preceding data. col_offset above gives us the number of
+            # extra non-data columns in this table
             volumes = row.iloc[2 + col_offset : 2 + col_offset + 12]
             for month_num, volume in enumerate(volumes, start=1):
                 if pd.notnull(volume):
