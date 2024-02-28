@@ -198,7 +198,10 @@ def _show_hours(settings: dict, data: data.DeptData):
             options=["12 Months", "24 Months", "5 Years", "All"],
         )
 
+    # Filter out any data before selected display period or after the latest month which has full data available
     df = _filter_by_period(data.hours, sel_period)
+    df = df[df["month"] <= data.stats["kpi_month_max"]]
+    
     with col1:
         figs.fte_fig(df, data.stats["budget_fte"])
     with col2:
