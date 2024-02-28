@@ -26,7 +26,7 @@ TMP_DB_FILE = "db-tmp.sqlite3"
 BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 # Historical volume data is in the STATS worksheet of the Dashboard Supporting Data spreadsheet
-VOLUMES_FILE = os.path.join(BASE_PATH, "Dashboard Supporting Data.xlsx")
+VOLUMES_FILE = os.path.join(BASE_PATH, "Dashboard Supporting Data 2024.xlsx")
 VOLUMES_SHEET = "STATS"
 VOLUMES_BUDGET_SHEET = "Data"
 

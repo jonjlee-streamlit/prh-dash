@@ -86,6 +86,19 @@ def show(config: configs.DeptConfig, settings: dict, data: data.DeptData):
 def _show_kpi(settings: dict, data: data.DeptData):
     s = data.stats
 
+    if all(
+        s == 0
+        for s in [
+            s["revenue_per_volume"],
+            s["target_revenue_per_volume"],
+            s["expense_per_volume"],
+            s["target_expense_per_volume"],
+            s["hours_per_volume"],
+            s["fte_variance"],
+        ]
+    ):
+        return st.write("No data for department")
+
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(
         "Revenue per Exam",
@@ -125,6 +138,18 @@ def _show_kpi(settings: dict, data: data.DeptData):
 
 
 def _show_volumes(settings: dict, data: data.DeptData):
+
+    if all(
+        s == 0
+        for s in [
+            data.stats["month_volume"],
+            data.stats["month_budget_volume"],
+            data.stats["ytm_volume"],
+            data.stats["ytm_budget_volume"],
+        ]
+    ):
+        return st.write("No data for department")
+
     month = datetime.strptime(settings["month"], "%Y-%m").strftime("%b %Y")
 
     st.subheader("Summary")

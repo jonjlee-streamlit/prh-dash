@@ -191,30 +191,38 @@ def _calc_stats(
     """Precalculate statistics from raw data that will be displayed on dashboard"""
     s = {}
 
-    # Define the latest month that we will use for KPIs as the lastest month
-    # we have both volume and income information for
-    month_max = min(volumes["month"].max(), income_stmt_df["month"].max())
-    month_max = (
-        month_max
-        if not pd.isna(month_max)
-        else f"{date.today().year:04d}-{date.today().month:02d}"
-    )
-    [month_max_year, month_max_month] = month_max.split("-")
-
-    # Get the volume for the selected month and current year. The volumes table has
-    # one number in the volume column for each department per month
+    # Get the currently selected month and year from the left sidebar
     sel_month = settings["month"]
     sel_year = sel_month[:4]
-    month_volume = volumes.loc[volumes["month"] == sel_month, "volume"].sum()
-    ytm_volume = volumes.loc[
-        volumes["month"].str.startswith(sel_year) & (volumes["month"] <= sel_month),
-        "volume",
-    ].sum()
-    ytd_volume = volumes.loc[
-        volumes["month"].str.startswith(month_max_year)
-        & (volumes["month"] <= month_max),
-        "volume",
-    ].sum()
+
+    if (volumes.empty):
+        # No volume information for this department yet
+        month_max = income_stmt_df["month"].max()
+        [month_max_year, month_max_month] = month_max.split("-")
+        month_volume, ytm_volume, ytd_volume = 0, 0, 0
+    else:
+        # Define the latest month that we will use for KPIs as the lastest month
+        # we have both volume and income information for
+        month_max = min(volumes["month"].max(), income_stmt_df["month"].max())
+        month_max = (
+            month_max
+            if not pd.isna(month_max)
+            else f"{date.today().year:04d}-{date.today().month:02d}"
+        )
+        [month_max_year, month_max_month] = month_max.split("-")
+
+        # Get the volume for the selected month / year. The volumes table has
+        # one number in the volume column for each department per month
+        month_volume = volumes.loc[volumes["month"] == sel_month, "volume"].sum()
+        ytm_volume = volumes.loc[
+            volumes["month"].str.startswith(sel_year) & (volumes["month"] <= sel_month),
+            "volume",
+        ].sum()
+        ytd_volume = volumes.loc[
+            volumes["month"].str.startswith(month_max_year)
+            & (volumes["month"] <= month_max),
+            "volume",
+        ].sum()
 
     # There is one budget row for each department. Sum them for overall budget,
     # and divide by the months in the year so far for the YTD volume and hours budgets.
