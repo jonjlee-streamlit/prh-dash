@@ -1,6 +1,7 @@
 """
 Route an incoming request to based on the URL query parameters to the corresponding dashboard
 """
+
 import streamlit as st
 
 DEFAULT = "default"
@@ -75,9 +76,7 @@ DEPTS = (
     ANESTHESIOLOGY,
     ATHLETIC_TRAINER,
     BEHAVIORAL_HEALTH,
-    BIRTHPLACE,
     CARDIO_PULM_REHAB,
-    CARDIOLOGY,
     CARE_COORD,
     CENTER_LEARNING_INNOVATION,
     CLINIC_ADMIN,
@@ -88,18 +87,17 @@ DEPTS = (
     ED_PHYSICIANS,
     ENVIRONMENTAL_SERVICES,
     EXTERNAL_RELATIONS,
-    FAMILY_MED,
+    RESIDENCY,
     FINANCE,
     FISCAL,
     FOUNDATION,
-    HEALTH_CENTER,
     HIM,
     HOSPITALIST,
     HR,
     ICU,
     IMAGING,
-    INFECTION_CONTROL,
     IT,
+    ORTHO,
     LAB,
     MAINTENANCE,
     MEDICAL_STAFF,
@@ -107,30 +105,30 @@ DEPTS = (
     NURSERY,
     NURSING_ADMIN,
     NUTRITION,
-    ORTHO,
-    PACU,
     PAIN,
-    PATIENT_FINANCIAL,
+    HEALTH_CENTER,
+    CARDIOLOGY,
     PEDIATRICS,
+    SLEEP,
+    UROLOGY,
+    PATIENT_FINANCIAL,
     PHARMACY,
     PHYSICIANS,
+    PACU,
+    FAMILY_MED,
     PODIATRY,
+    SURGERY,
     QUALITY_RESOURCES,
     REDSAGE,
     REGISTRATION,
     RELIABILITY,
-    RESIDENCY,
     RESOURCE_MATERIALS,
     RESPIRATORY,
     REVENUE_CYCLE,
     SAME_DAY,
-    SLEEP,
     SLEEP_LAB,
     SUMMIT,
-    SUPPLY_DIST,
-    SURGERY,
     SURGICAL_SVC,
-    UROLOGY
 )
 
 # IDs for API calls
