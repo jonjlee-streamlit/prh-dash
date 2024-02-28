@@ -112,13 +112,13 @@ def _show_kpi(settings: dict, data: data.DeptData):
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric(
-        "Expense per Encounter",
+        "Expense per Exam",
         f"${s['expense_per_volume']:,.0f}",
         delta=f"{s['variance_expense_per_volume']}% {'above' if s['expense_per_volume'] >= s['target_expense_per_volume'] else 'below'} target",
         delta_color="inverse",
     )
     col2.metric(
-        "Target Expense per Encounter",
+        "Target Expense per Exam",
         f"${s['target_expense_per_volume']:,.0f}",
     )
 
