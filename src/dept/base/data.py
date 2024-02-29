@@ -195,7 +195,7 @@ def _calc_stats(
     sel_month = settings["month"]
     sel_year = sel_month[:4]
 
-    if (volumes.empty):
+    if volumes.empty:
         # No volume information for this department yet
         month_max = income_stmt_df["month"].max()
         [month_max_year, month_max_month] = month_max.split("-")
@@ -238,9 +238,13 @@ def _calc_stats(
     ].sum()
     if len(wd_ids) > 1:
         # If there is more than one department, recalculate values that cannot just be summed across depts
-        budget_df["budget_prod_hrs_per_volume"] = (
-            budget_df["budget_prod_hrs"] / budget_df["budget_volume"]
-        )
+        if budget_df["budget_volume"] > 0:
+            budget_df["budget_prod_hrs_per_volume"] = (
+                budget_df["budget_prod_hrs"] / budget_df["budget_volume"]
+            )
+        else:
+            budget_df["budget_prod_hrs_per_volume"] = 0
+
         # Calculate average of hourly rates - this is not entirely accurate, since pay/hours are not distributed
         # evenly across departments. When possible, this will be recalulated below using (YTD salary / YTD hours)
         budget_df["hourly_rate"] = budget_df["hourly_rate"] / len(wd_ids)

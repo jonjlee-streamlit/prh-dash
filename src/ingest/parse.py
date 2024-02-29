@@ -9,7 +9,7 @@ from .. import util, static_data
 # Pay periods go from Saturday -> Friday two weeks later, and the pay date is on the Friday following the pay period.
 PAY_PERIOD_ANCHOR_DATE = {
     "year": 2023,
-    "start_date": datetime(2022, 12, 31),
+    "start_date": datetime(2022, 12, 17),
 }
 
 
@@ -40,7 +40,7 @@ def read_volume_data(filename, sheet):
         year_row, year_col = 0, 2
         col_offset = 0 if pd.notna(df.iloc[year_row, year_col]) else 1
         year = df.iloc[year_row, year_col + col_offset]
-        assert(pd.notna(year))
+        assert pd.notna(year)
 
         # Skip header rows x 2 with year and month names
         df = df.iloc[2:]
@@ -93,6 +93,11 @@ def read_budget_data(filename, sheet):
     # ---------
     # Drop columns without an Workday ID
     budget_df.dropna(subset=["dept_wd_id"], inplace=True)
+    # Interpret NaN as 0 budgeted volume and hrs/volume
+    budget_df["budget_volume"] = budget_df["budget_volume"].fillna(0)
+    budget_df["budget_prod_hrs_per_volume"] = budget_df[
+        "budget_prod_hrs_per_volume"
+    ].fillna(0)
 
     return budget_df[
         [
@@ -237,6 +242,7 @@ def read_historical_hours_and_fte_data(filename, year):
 
         # Add the pay period number in the format YYYY-##
         pp_num = xl_data.at[row_start + 1, 0]
+        pp_end_date = xl_data.at[row_start + 1, 1]
         hours_df["pay_period"] = f"{year}-{pp_num:02d}"
 
         # Transform
@@ -244,9 +250,10 @@ def read_historical_hours_and_fte_data(filename, year):
         # Sum overtime/double and premium hours all into overtime_hrs
         hours_df["overtime_hrs"] = hours_df["ot_hrs"] + hours_df["premium_hrs"]
 
-        # Interpret NaN as 0 hrs for regular and overtime hours
+        # Interpret NaN as 0 hrs for regular and overtime hours and total FTE
         hours_df["reg_hrs"] = hours_df["reg_hrs"].fillna(0)
         hours_df["overtime_hrs"] = hours_df["overtime_hrs"].fillna(0)
+        hours_df["total_fte"] = hours_df["total_fte"].fillna(0)
 
         # Add a new column "dept_wd_id" using dict, and drop rows without a known workday dept ID
         hours_df["dept_wd_id"] = (
@@ -401,22 +408,28 @@ def _add_pay_period_start_date(df):
 
 
 def _find_start_date_of_first_pay_period_in_year(year):
-    # If needed, walk the anchor date back by 2 weeks increments until anchor is in a prior to target year.
+    # The pay date for a pay period, which starts on Sunday, is the Friday following the end of the pay period.
+    # Pay date = end date + 7 days = start date + 13 days + 7 days
+    def calc_pay_date(start_date):
+        return start_date + timedelta(days=20)
+
+    # If needed, walk back from anchor date by 2 weeks increments until the pay period pay date is in a prior year to target year.
     # PAY_PERIOD_ANCHOR_DATE["start_date"] is the start date of pay period #1 in the year PAY_PERIOD_ANCHOR_DATE["year"].
-    # It is likely a date in Dec of the previous year.
+    # It is likely in Dec of the previous year.
     cur_date = PAY_PERIOD_ANCHOR_DATE["start_date"]
     if year < PAY_PERIOD_ANCHOR_DATE["year"]:
-        while year <= cur_date.year:
+        while year <= calc_pay_date(cur_date).year:
             cur_date += timedelta(days=-14)
 
-    # For accounting, find the first pay period that include at least one day in the year.  Walk forward from the anchor
-    # start_date 14 days at a time. Once the period end date (13 days from start date) is in the target year, we have
-    # the dates for the first pay period.
+    # The first pay period is the first pay day within a year. A pay period's pay date is 1 week past the end of the period.
+    # For example, pay 2023 PP#1 has dates of 12/17/22-12/30/22 with a pay date of 1/6/23. Since 1/6/23 is the first pay date
+    # in 2023, it is pay period #1.
     #
-    # This is different than pay roll pay periods, where pay period 1 is numbered to correspond to the first pay date
-    # in the year. The pay date for a pay period is the Friday following the end of the pay period
+    # Walk forward from the anchor start_date 14 days at a time. Once the pay date (end date + 7 days = 20 days from start date)
+    # is in the target year, we have the dates for the first pay period.
+    #
     while cur_date.year <= year:
-        end_date = cur_date + timedelta(days=13)
-        if end_date.year == year:
+        pay_date = calc_pay_date(cur_date)
+        if pay_date.year == year:
             return cur_date
         cur_date += timedelta(days=14)
