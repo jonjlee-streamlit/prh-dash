@@ -206,7 +206,7 @@ def read_historical_hours_and_fte_data(filename, year):
     """
     # Extract data from first and only worksheet
     logging.info(f"Reading {filename}")
-    xl_data = pd.read_excel(filename, header=None, usecols="A,B,C,D,E,G,M,N,AB")
+    xl_data = pd.read_excel(filename, header=None, usecols="A,B,C,D,G,M,N,AB")
 
     # Loop over tables in worksheet, each one representing a pay period
     ret = []
@@ -232,8 +232,7 @@ def read_historical_hours_and_fte_data(filename, year):
             "Department Number",
             "Department Name",
             "reg_hrs",
-            "ot_hrs",
-            "premium_hrs",
+            "overtime_hrs",
             "prod_hrs",
             "nonprod_hrs",
             "total_hrs",
@@ -247,9 +246,6 @@ def read_historical_hours_and_fte_data(filename, year):
 
         # Transform
         # ---------
-        # Sum overtime/double and premium hours all into overtime_hrs
-        hours_df["overtime_hrs"] = hours_df["ot_hrs"] + hours_df["premium_hrs"]
-
         # Interpret NaN as 0 hrs for regular and overtime hours and total FTE
         hours_df["reg_hrs"] = hours_df["reg_hrs"].fillna(0)
         hours_df["overtime_hrs"] = hours_df["overtime_hrs"].fillna(0)
@@ -324,8 +320,7 @@ def read_hours_and_fte_data(files):
         # ---------
         # Sum overtime/double and premium hours all into overtime_hrs
         hours_df["overtime_hrs"] = (
-            hours_df["CALLBK - CALLBACK"]
-            + hours_df["DBLTME - DOUBLETIME"]
+            hours_df["DBLTME - DOUBLETIME"]
             + hours_df["OT_1.5 - OVERTIME"]
         )
 
