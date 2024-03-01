@@ -148,9 +148,14 @@ def _calc_hours_ytm(df: pd.DataFrame, month: str) -> pd.DataFrame:
     if df.shape[0] > 0:
         df = df[columns]
         ret = df.sum()
-        ret["total_fte"] = ret["total_hrs"] / (
-            static_data.FTE_HOURS_PER_YEAR * (int(month_num) / 12)
-        )
+
+        # For January, just use data in FTE column. Do not recalculate total_fte using hours. Use calculation for
+        # subsequent months.
+        month_num = int(month_num)
+        if month_num > 1:
+            ret["total_fte"] = ret["total_hrs"] / (
+                static_data.FTE_HOURS_PER_YEAR * (month_num / 12)
+            )
         return ret
     else:
         return pd.DataFrame(columns=columns)
