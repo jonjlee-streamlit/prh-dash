@@ -169,11 +169,12 @@ def _show_volumes(settings: dict, data: data.DeptData):
             label="Show",
             key="volume_period",
             label_visibility="collapsed",
-            options=["12 Months", "24 Months", "5 Years", "All"],
+            options=["Compare", "12 Months", "24 Months", "5 Years", "All"]
         )
     with col_graph:
         df = _filter_by_period(data.volumes, volumes_period)
-        figs.volumes_fig(df)
+        group_by_month = (volumes_period == "Compare")
+        figs.volumes_fig(df, group_by_month)
 
 
 def _show_hours(settings: dict, data: data.DeptData):
@@ -195,17 +196,21 @@ def _show_hours(settings: dict, data: data.DeptData):
             label="Show",
             key="hours_period",
             label_visibility="collapsed",
-            options=["12 Months", "24 Months", "5 Years", "All"],
+            options=["Compare", "12 Months", "24 Months", "5 Years", "All"],
+            index=1
         )
 
     # Filter out any data before selected display period or after the latest month which has full data available
     df = _filter_by_period(data.hours, sel_period)
     df = df[df["month"] <= data.stats["kpi_month_max"]]
+
+    # For comparison display, x axis is months Jan to Dec
+    group_by_month = (sel_period == "Compare")
     
     with col1:
-        figs.fte_fig(df, data.stats["budget_fte"])
+        figs.fte_fig(df, data.stats["budget_fte"], group_by_month)
     with col2:
-        figs.hours_fig(df)
+        figs.hours_fig(df, group_by_month)
 
 
 def _show_income_stmt(settings: dict, data: data.DeptData):

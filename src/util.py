@@ -373,7 +373,10 @@ def period_str_to_month_strs(dates: str) -> typing.Tuple[str, str]:
     def dates_to_months(date1: datetime, date2: datetime):
         return (date1.strftime("%Y-%m"), date2.strftime("%Y-%m"))
 
-    if dates == "month to date":
+    if dates == "compare":
+        first_date = datetime(today.year - 2, month=1, day=1)
+        return dates_to_months(first_date, today)
+    elif dates == "month to date":
         return dates_to_months(today, today)
     elif dates == "year to date":
         first_date = datetime(today.year, 1, 1)
@@ -399,6 +402,23 @@ def period_str_to_month_strs(dates: str) -> typing.Tuple[str, str]:
     else:
         return None, None
 
+# Group a set of data with two columns by month from Jan to Dec. month_col should be the name of a column
+# in the format "2020-01" and value_col the name of the data column.
+def group_data_by_month(src, month_col, value_col):
+    # Split source month column in the form 2020-01 into month and year numbers. Year should be a string 
+    # instead of number so it can be used as a categorical classifier for plotly graphs
+    df = pd.DataFrame(columns=["Month", value_col, "Year"])
+    _first_day_of_month = pd.to_datetime(src[month_col])
+    df["Month"] = _first_day_of_month.dt.month_name()
+    df["Year"] = _first_day_of_month.dt.year.astype('str')
+    df[value_col] = src[value_col]
+
+    # Specify order of months, since we can't sort alphanumerically
+    new_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    df['Month'] = pd.Categorical(df['Month'], categories=new_order, ordered=True)
+    df = df.sort_values('Month')
+
+    return df
 
 # -----------------------------------
 # Finance functions

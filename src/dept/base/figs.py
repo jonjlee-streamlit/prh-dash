@@ -3,6 +3,7 @@ import plotly.express as px
 import streamlit as st
 from datetime import datetime
 from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, JsCode
+from ... import util
 
 
 def aggrid_income_stmt(df, month=None):
@@ -115,15 +116,19 @@ def aggrid_income_stmt(df, month=None):
     )
 
 
-def volumes_fig(df):
-    df = df.copy()
-    df.columns = ["Month", "Volume"]
-    fig = px.bar(
-        df,
-        x=df.columns[0],
-        y=df.columns[1],
-        text=df.columns[1],
-    )
+def volumes_fig(src, group_by_month):
+    if group_by_month:
+        # Groups data by month, show a bar for each year above each month
+        df = util.group_data_by_month(src, month_col="month", value_col="volume")
+        df.columns = ["Month", "Volume", "Year"]
+        color = "Year"
+    else:
+        # Display as normal time series data
+        df = src.copy()
+        df.columns = ["Month", "Volume"]
+        color = None
+
+    fig = px.bar(df, x="Month", y="Volume", text="Volume", color=color, barmode="group")
     fig.update_traces(
         hovertemplate="<br>".join(
             [
@@ -194,12 +199,27 @@ def hours_table(month, hours_for_month, hours_ytd):
     st.markdown(styled_df.to_html(), unsafe_allow_html=True)
 
 
-def fte_fig(src, budget_fte):
-    df = src[["month", "total_fte"]].copy()
-    df = df.sort_values(by=["month"], ascending=[True])
-    df.columns = ["Month", "FTE"]
+def fte_fig(src, budget_fte, group_by_month):
+    if group_by_month:
+        # Groups data by month, show a bar for each year above each month
+        df = util.group_data_by_month(src, month_col="month", value_col="total_fte")
+        df.columns = ["Month", "FTE", "Year"]
+        color = "Year"
+    else:
+        # Display as normal time series data
+        df = src[["month", "total_fte"]].copy()
+        df = df.sort_values(by=["month"], ascending=[True])
+        df.columns = ["Month", "FTE"]
+        color = None
+
     fig = px.bar(
-        df, x=df.columns[0], y=df.columns[1], text=df.columns[1], text_auto=".1f"
+        df,
+        x="Month",
+        y="FTE",
+        color=color,
+        barmode="group",
+        text="FTE",
+        text_auto=".1f",
     )
     # Horizontal budget line
     fig.add_hline(
@@ -232,7 +252,7 @@ def fte_fig(src, budget_fte):
     st.plotly_chart(fig, use_container_width=True)
 
 
-def hours_fig(src):
+def hours_fig(src, group_by_month):
     df = src[["month", "prod_hrs", "nonprod_hrs", "total_hrs"]].copy()
     df.columns = [
         "Month",
