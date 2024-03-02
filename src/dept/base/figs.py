@@ -235,7 +235,7 @@ def fte_fig(src, budget_fte, group_by_month):
         xshift=0,
         yshift=15,
     )
-    # On hover text, show pay period number "2023 PP#1" and round y value to 1 decimal
+    # On hover text, round y value to 1 decimal
     fig.update_traces(hovertemplate="%{y:.1f} FTE", texttemplate="%{text:,.0f}")
     fig.update_layout(
         margin={"t": 25},
