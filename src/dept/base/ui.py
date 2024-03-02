@@ -210,7 +210,10 @@ def _show_hours(settings: dict, data: data.DeptData):
     with col1:
         figs.fte_fig(df, data.stats["budget_fte"], group_by_month)
     with col2:
-        figs.hours_fig(df, group_by_month)
+        if group_by_month:
+            figs.compare_hours_fig(df)
+        else:
+            figs.hours_fig(df)
 
 
 def _show_income_stmt(settings: dict, data: data.DeptData):

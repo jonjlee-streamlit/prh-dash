@@ -242,11 +242,14 @@ def fte_fig(src, budget_fte, group_by_month):
         hovermode="x unified",
         xaxis={"tickformat": "%b %Y"},
         xaxis_title=None,
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+        ),  # show legend horizontally on top right
     )
     st.plotly_chart(fig, use_container_width=True)
 
 
-def hours_fig(src, group_by_month):
+def hours_fig(src):
     df = src[["month", "prod_hrs", "nonprod_hrs", "total_hrs"]].copy()
     df.columns = [
         "Month",
@@ -290,4 +293,35 @@ def hours_fig(src, group_by_month):
     fig.update_layout(
         margin={"t": 25},
     )
+    st.plotly_chart(fig, use_container_width=True)
+
+def compare_hours_fig(src):
+    # Show a graph with hours grouped by month across years. Don't separate prod/nonprod for this graph since that display requires
+    # stacked bars and we are going to use grouped bars.
+    df = util.group_data_by_month(src, month_col="month", value_col="total_hrs")
+    df.columns = ["Month", "Hours", "Year"]
+
+    fig = px.bar(
+        df,
+        x="Month",
+        y="Hours",
+        color="Year",
+        barmode="group",
+        text="Hours",
+        text_auto=".1f",
+    )
+
+    # On hover text, show 1 decimal
+    fig.update_traces(hovertemplate="%{y:.0f}h", texttemplate="%{text:,.0f}")
+    fig.update_layout(
+        margin={"t": 25},
+        hovermode="x unified",  # Hover text based on x position of mouse, and include values of both bars
+        xaxis_title=None,
+        yaxis={"tickformat": ","},
+        yaxis_title="Total Hours",
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+        ),  # show legend horizontally on top right
+    )
+
     st.plotly_chart(fig, use_container_width=True)
