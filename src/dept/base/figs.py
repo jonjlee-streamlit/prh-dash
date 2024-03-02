@@ -129,19 +129,13 @@ def volumes_fig(src, group_by_month):
         color = None
 
     fig = px.bar(df, x="Month", y="Volume", text="Volume", color=color, barmode="group")
-    fig.update_traces(
-        hovertemplate="<br>".join(
-            [
-                "%{x|%b %Y}",
-                "%{y} exams",
-            ]
-        ),
+    fig.update_traces(hovertemplate="%{y} exams",
         texttemplate="%{text:,}",
     )
     # Remove excessive top margin
     fig.update_layout(
         margin={"t": 0},
-        hovermode="x",
+        hovermode="x unified",
         xaxis_title=None,
         yaxis_title=None,
     )
