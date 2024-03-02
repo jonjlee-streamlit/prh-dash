@@ -413,6 +413,9 @@ def group_data_by_month(src, month_col, value_col):
     df["Year"] = _first_day_of_month.dt.year.astype('str')
     df[value_col] = src[value_col]
 
+    # Sort data by year, so that bars show up in order of year
+    df = df.sort_values(by="Year")
+
     # Specify order of months, since we can't sort alphanumerically
     new_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
     df['Month'] = pd.Categorical(df['Month'], categories=new_order, ordered=True)
