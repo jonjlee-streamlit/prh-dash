@@ -419,7 +419,7 @@ def group_data_by_month(src, month_col, value_col):
     # Specify order of months, since we can't sort alphanumerically
     new_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
     df['Month'] = pd.Categorical(df['Month'], categories=new_order, ordered=True)
-    df = df.sort_values('Month')
+    df = df.sort_values(['Month', 'Year'])
 
     return df
 
