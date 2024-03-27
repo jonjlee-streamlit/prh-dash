@@ -105,7 +105,6 @@ def _show_kpi(settings: dict, data: data.DeptData):
     col1.metric(
         "Revenue per UOS",
         f"${s['revenue_per_volume']:,.0f}",
-        # f"{s['variance_revenue_per_volume']}% {'above' if s['revenue_per_volume'] >= s['target_revenue_per_volume'] else 'below'} target",
     )
     col2.metric(
         "Target Revenue per UOS",
@@ -118,8 +117,6 @@ def _show_kpi(settings: dict, data: data.DeptData):
     col1.metric(
         "Expense per UOS",
         f"${s['expense_per_volume']:,.0f}",
-        # delta=f"{s['variance_expense_per_volume']}% {'above' if s['expense_per_volume'] >= s['target_expense_per_volume'] else 'below'} target",
-        # delta_color="inverse",
     )
     col2.metric(
         "Target Expense per UOS",
