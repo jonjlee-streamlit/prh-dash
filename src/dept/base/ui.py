@@ -99,33 +99,41 @@ def _show_kpi(settings: dict, data: data.DeptData):
     ):
         return st.write("No data for department")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 8])
+    with col3:
+        figs.kpi_gauge("% Variance", s["variance_revenue_per_volume"], 5, 10, 12)
     col1.metric(
-        "Revenue per Exam",
+        "Revenue per UOS",
         f"${s['revenue_per_volume']:,.0f}",
-        f"{s['variance_revenue_per_volume']}% {'above' if s['revenue_per_volume'] >= s['target_revenue_per_volume'] else 'below'} target",
+        # f"{s['variance_revenue_per_volume']}% {'above' if s['revenue_per_volume'] >= s['target_revenue_per_volume'] else 'below'} target",
     )
     col2.metric(
-        "Target Revenue per Exam",
+        "Target Revenue per UOS",
         f"${s['target_revenue_per_volume']:,.0f}",
     )
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 8])
+    with col3:
+        figs.kpi_gauge("% Variance", s["variance_expense_per_volume"], 5, 10, 12)
     col1.metric(
-        "Expense per Exam",
+        "Expense per UOS",
         f"${s['expense_per_volume']:,.0f}",
-        delta=f"{s['variance_expense_per_volume']}% {'above' if s['expense_per_volume'] >= s['target_expense_per_volume'] else 'below'} target",
-        delta_color="inverse",
+        # delta=f"{s['variance_expense_per_volume']}% {'above' if s['expense_per_volume'] >= s['target_expense_per_volume'] else 'below'} target",
+        # delta_color="inverse",
     )
     col2.metric(
-        "Target Expense per Exam",
+        "Target Expense per UOS",
         f"${s['target_expense_per_volume']:,.0f}",
     )
 
     st.subheader("Productivity")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Hours per Exam", f"{s['hours_per_volume']:,.2f}")
-    col2.metric("Target Hours per Exam", f"{s['target_hours_per_volume']:,.2f}")
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 8])
+    with col3:
+        figs.kpi_gauge("% Variance", s["variance_hours_per_volume_pct"], 5, 10, 12)
+    col1.metric("Hours per UOS", f"{s['hours_per_volume']:,.2f}")
+    col2.metric("Target Hours per UOS", f"{s['target_hours_per_volume']:,.2f}")
+
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 8])
     col1.metric("FTE Variance", f"{s['fte_variance']:,.2f}")
 
     v = round(s["fte_variance_dollars"])
@@ -169,11 +177,11 @@ def _show_volumes(settings: dict, data: data.DeptData):
             label="Show",
             key="volume_period",
             label_visibility="collapsed",
-            options=["Compare", "12 Months", "24 Months", "5 Years", "All"]
+            options=["Compare", "12 Months", "24 Months", "5 Years", "All"],
         )
     with col_graph:
         df = _filter_by_period(data.volumes, volumes_period)
-        group_by_month = (volumes_period == "Compare")
+        group_by_month = volumes_period == "Compare"
         figs.volumes_fig(df, group_by_month)
 
 
@@ -183,7 +191,10 @@ def _show_hours(settings: dict, data: data.DeptData):
 
     # Show productive / non-productive hours for month
     st.subheader("Summary")
-    figs.hours_table(data.month, data.hours_for_month, data.hours_ytm)
+    if data.hours_for_month is None or data.hours_for_month.shape[0] == 0:
+        st.write("No data for this month")
+    else:
+        figs.hours_table(data.month, data.hours_for_month, data.hours_ytm)
 
     # Show graph of historical FTE. Allow user to select how many months to show.
     st.write("&nbsp;")
@@ -197,7 +208,7 @@ def _show_hours(settings: dict, data: data.DeptData):
             key="hours_period",
             label_visibility="collapsed",
             options=["Compare", "12 Months", "24 Months", "5 Years", "All"],
-            index=1
+            index=1,
         )
 
     # Filter out any data before selected display period or after the latest month which has full data available
@@ -205,8 +216,8 @@ def _show_hours(settings: dict, data: data.DeptData):
     df = df[df["month"] <= data.stats["kpi_month_max"]]
 
     # For comparison display, x axis is months Jan to Dec
-    group_by_month = (sel_period == "Compare")
-    
+    group_by_month = sel_period == "Compare"
+
     with col1:
         figs.fte_fig(df, data.stats["budget_fte"], group_by_month)
     with col2:

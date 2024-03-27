@@ -1,9 +1,76 @@
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 from datetime import datetime
 from st_aggrid import AgGrid, GridOptionsBuilder, ColumnsAutoSizeMode, JsCode
 from ... import util
+
+
+# Display a gauge chart with 0% variance in the middle
+def kpi_gauge(title, variance_pct, yellow_threshold, red_threshold, gauge_max):
+    color = "#238823"
+    textcolor = color
+    if abs(variance_pct) > red_threshold:
+        color = "#EF553B"
+        textcolor = color
+    elif abs(variance_pct) > yellow_threshold:
+        color = "#FFBF00"
+        textcolor = "#b38600"
+
+    arrow = "&#9650; " if variance_pct > 0 else "&#9660; " if variance_pct < 0 else ""
+
+    fig = go.Figure(
+        go.Indicator(
+            # title={"text": title, "font": {"size": 14, "color": "#000000"}},
+            mode="gauge",
+            value=variance_pct,
+            number={"suffix": "%"},
+            gauge={
+                "bar": {"thickness": 0},
+                "axis": {
+                    "range": [-gauge_max, gauge_max],
+                    "showticklabels": False,
+                    "ticklen": 0,
+                    "tickvals": [
+                        -red_threshold,
+                        -yellow_threshold,
+                        0,
+                        yellow_threshold,
+                        red_threshold,
+                    ],
+                    "ticksuffix": "%",
+                },
+                "steps": [
+                    {
+                        "range": [0, variance_pct],
+                        "color": color,
+                        "thickness": 1,
+                    },
+                ],
+                "threshold": {
+                    "line": {"color": color},
+                    "thickness": 1 if variance_pct == 0 else 0,
+                    "value": variance_pct,
+                },
+            },
+        )
+    )
+    fig.add_annotation(
+        text=f"{arrow}{variance_pct}% {'above' if variance_pct >= 0 else 'below'} target",
+        xanchor="center",
+        y=-0.7,
+        showarrow=False,
+        font={"size": 16, "color": textcolor},
+    )
+    fig.update_layout(
+        dict(
+            showlegend=False,
+            margin=dict(autoexpand=False, b=50, t=10, pad=0),
+            height=100,
+        )
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def aggrid_income_stmt(df, month=None):
@@ -129,7 +196,8 @@ def volumes_fig(src, group_by_month):
         color = None
 
     fig = px.bar(df, x="Month", y="Volume", text="Volume", color=color, barmode="group")
-    fig.update_traces(hovertemplate="%{y} exams",
+    fig.update_traces(
+        hovertemplate="%{y} exams",
         texttemplate="%{text:,}",
     )
     # Remove excessive top margin
@@ -294,6 +362,7 @@ def hours_fig(src):
         margin={"t": 25},
     )
     st.plotly_chart(fig, use_container_width=True)
+
 
 def compare_hours_fig(src):
     # Show a graph with hours grouped by month across years. Don't separate prod/nonprod for this graph since that display requires

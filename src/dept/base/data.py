@@ -324,6 +324,11 @@ def _calc_stats(
     s["variance_hours_per_volume"] = (
         s["target_hours_per_volume"] - s["hours_per_volume"]
     )
+    s["variance_hours_per_volume_pct"] = (
+        round(-s["variance_hours_per_volume"] / s["target_hours_per_volume"] * 100)
+        if s["target_hours_per_volume"] > 0
+        else 0
+    )
     if ytd_hours:
         # prefer to calculate hourly rate directly vs using data from Dashboard Supporting Data
         s["hourly_rate"] = ytd_salary / ytd_hours
