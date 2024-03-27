@@ -11,10 +11,10 @@ from ... import util
 def kpi_gauge(title, variance_pct, yellow_threshold, red_threshold, gauge_max):
     color = "#238823"
     textcolor = color
-    if abs(variance_pct) > red_threshold:
+    if abs(variance_pct) >= red_threshold:
         color = "#EF553B"
         textcolor = color
-    elif abs(variance_pct) > yellow_threshold:
+    elif abs(variance_pct) >= yellow_threshold:
         color = "#FFBF00"
         textcolor = "#b38600"
 
