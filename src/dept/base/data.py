@@ -311,9 +311,7 @@ def _calc_stats(
             (s["revenue_per_volume"] / s["target_revenue_per_volume"] - 1) * 100
         )
         s["target_expense_per_volume"] = ytd_budget_expense / ytd_budget_volume
-        s["variance_expense_per_volume"] = math.trunc(
-            (s["expense_per_volume"] / s["target_expense_per_volume"] - 1) * 100
-        )
+        s["variance_expense_per_volume"] = math.trunc((s["expense_per_volume"] / s["target_expense_per_volume"] - 1) * 100)
     else:
         s["target_revenue_per_volume"] = 0
         s["variance_revenue_per_volume"] = 0
