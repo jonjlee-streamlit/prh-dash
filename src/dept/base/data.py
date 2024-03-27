@@ -3,6 +3,7 @@ Transform source data into department specific data that can be displayed on das
 """
 
 import pandas as pd
+import math
 from dataclasses import dataclass
 from datetime import date
 from dateutil.relativedelta import relativedelta
@@ -306,11 +307,11 @@ def _calc_stats(
 
     if ytd_budget_volume and ytd_budget_revenue and ytd_budget_expense:
         s["target_revenue_per_volume"] = ytd_budget_revenue / ytd_budget_volume
-        s["variance_revenue_per_volume"] = round(
+        s["variance_revenue_per_volume"] = math.trunc(
             (s["revenue_per_volume"] / s["target_revenue_per_volume"] - 1) * 100
         )
         s["target_expense_per_volume"] = ytd_budget_expense / ytd_budget_volume
-        s["variance_expense_per_volume"] = round(
+        s["variance_expense_per_volume"] = math.trunc(
             (s["expense_per_volume"] / s["target_expense_per_volume"] - 1) * 100
         )
     else:
@@ -325,7 +326,7 @@ def _calc_stats(
         s["target_hours_per_volume"] - s["hours_per_volume"]
     )
     s["variance_hours_per_volume_pct"] = (
-        round(-s["variance_hours_per_volume"] / s["target_hours_per_volume"] * 100)
+        math.trunc(-s["variance_hours_per_volume"] / s["target_hours_per_volume"] * 100)
         if s["target_hours_per_volume"] > 0
         else 0
     )
