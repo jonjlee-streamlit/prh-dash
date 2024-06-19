@@ -64,15 +64,15 @@ def read_volume_data(filename, sheet):
     return pd.DataFrame(data, columns=["dept_wd_id", "dept_name", "month", "volume"])
 
 
-def read_budget_data(filename, sheet):
+def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet):
     """
     Read the sheet from the Dashboard Supporting Data Excel workbook with budgeted hours and volume data into a dataframe
     """
     # Extract table and assign column names that match DB schema for columns we will retain
-    logging.info(f"Reading {filename}, {sheet}")
-    xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
+    logging.info(f"Reading {filename}, {budget_sheet}")
+    xl_data = pd.read_excel(filename, sheet_name=budget_sheet, header=None)
     budget_df = util.df_get_tables_by_rows(
-        xl_data, cols="B:L", start_row_idx=6, limit=1
+        xl_data, cols="B:K", start_row_idx=6, limit=1
     )
     budget_df = budget_df[0]
     budget_df.columns = [
@@ -83,21 +83,27 @@ def read_budget_data(filename, sheet):
         "% Productive",
         "budget_prod_hrs",
         "budget_volume",
-        "budget_prod_hrs_per_volume",
         "",
         "hourly_rate",
         "Current YTD FTE",
     ]
 
+    logging.info(f"Reading {filename}, {hrs_per_volume_sheet}")
+    xl_data = pd.read_excel(filename, sheet_name=hrs_per_volume_sheet, header=None)
+    hrs_per_volume_df = util.df_get_table(xl_data, start_cell="A2", has_header_row=True)
+
     # Transform
     # ---------
     # Drop columns without an Workday ID
     budget_df.dropna(subset=["dept_wd_id"], inplace=True)
-    # Interpret NaN as 0 budgeted volume and hrs/volume
+    # Join volumes and budgeted hours tables based on workday ID
+    budget_df = budget_df.join(hrs_per_volume_df.set_index("ID"), on="dept_wd_id")
+    # Interpret NaN as 0 budgeted fte, hours, volume and hrs/volume
+    budget_df["budget_fte"] = budget_df["budget_fte"].fillna(0)
+    budget_df["budget_prod_hrs"] = budget_df["budget_prod_hrs"].fillna(0)
     budget_df["budget_volume"] = budget_df["budget_volume"].fillna(0)
-    budget_df["budget_prod_hrs_per_volume"] = budget_df[
-        "budget_prod_hrs_per_volume"
-    ].fillna(0)
+    budget_df["budget_prod_hrs_per_volume"] = budget_df["GOAL"].fillna(0)
+    budget_df["hourly_rate"] = budget_df["hourly_rate"].fillna(0)
 
     return budget_df[
         [
@@ -320,8 +326,7 @@ def read_hours_and_fte_data(files):
         # ---------
         # Sum overtime/double and premium hours all into overtime_hrs
         hours_df["overtime_hrs"] = (
-            hours_df["DBLTME - DOUBLETIME"]
-            + hours_df["OT_1.5 - OVERTIME"]
+            hours_df["DBLTME - DOUBLETIME"] + hours_df["OT_1.5 - OVERTIME"]
         )
 
         # Add a new column "dept_wd_id" using dict, and drop rows without a known workday dept ID

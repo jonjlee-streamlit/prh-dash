@@ -26,9 +26,10 @@ TMP_DB_FILE = "db-tmp.sqlite3"
 BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 # Historical volume data is in the STATS worksheet of the Dashboard Supporting Data spreadsheet
-VOLUMES_FILE = os.path.join(BASE_PATH, "Dashboard Supporting Data 2024.xlsx")
+VOLUMES_FILE = os.path.join(BASE_PATH, "Dashboard Supporting Data 2024 v3.xlsx")
 VOLUMES_SHEET = "STATS"
 VOLUMES_BUDGET_SHEET = "Data"
+HRS_PER_VOLUME_SHEET = "Prod.MH UOS"
 
 # The Natural Class subdir contains income statment in one Excel file per month, eg,
 # ./Natural Class/2022/(01) Jan 2022 Natural Class.xlsx
@@ -119,7 +120,9 @@ if __name__ == "__main__":
 
     # Extract and perform basic transformation of data from spreadsheets
     volumes_df = parse.read_volume_data(VOLUMES_FILE, VOLUMES_SHEET)
-    budget_df = parse.read_budget_data(VOLUMES_FILE, VOLUMES_BUDGET_SHEET)
+    budget_df = parse.read_budget_data(
+        VOLUMES_FILE, VOLUMES_BUDGET_SHEET, HRS_PER_VOLUME_SHEET
+    )
     income_stmt_df = parse.read_income_stmt_data(income_stmt_files)
     historical_hours_df = parse.read_historical_hours_and_fte_data(
         HISTORICAL_HOURS_FILE, HISTORICAL_HOURS_YEAR
