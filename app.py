@@ -10,8 +10,7 @@ def run():
         src_data = source_data.from_db(source_data.DEFAULT_DB_FILE)
 
     # Handle routing based on query parameters
-    query_params = st.experimental_get_query_params()
-    route_id = route.route_by_query(query_params)
+    route_id = route.route_by_query(st.query_params)
 
     # Check for access to update / API resources first
     if route_id == route.UPDATE:

@@ -146,11 +146,11 @@ def route_by_query(query_params: dict) -> str:
     update = query_params.get("update")
     dept = query_params.get("dept")
     api = query_params.get("api")
-    if update and len(update) > 0 and update[0] == "1":
+    if update == "1":
         return UPDATE
-    if api and len(api) > 0 and api[0] in API:
-        return api[0]
-    if dept and len(dept) > 0 and dept[0] in DEPTS:
-        return dept[0]
+    if api and api in API:
+        return api
+    if dept and dept in DEPTS:
+        return dept
 
     return DEFAULT
