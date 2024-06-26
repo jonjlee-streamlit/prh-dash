@@ -13,7 +13,7 @@ PAY_PERIOD_ANCHOR_DATE = {
 }
 
 
-def read_volume_data(filename, sheet):
+def read_volume_and_uos_data(filename, sheet, data_col_name):
     """
     Read the Excel sheet with volume data into a dataframe
     """
@@ -33,6 +33,10 @@ def read_volume_data(filename, sheet):
     # 2022-01   CC_60100  INTENSIVE CARE UNIT   62
     # ...
 
+    # Store map of dept ID to volume unit, which is in column C of the first table
+    tbl = volumes_by_year[0]
+    dept_id_to_unit = {row[0]: row[2] for row in tbl.itertuples(index=False)}
+
     data = []
     for df in volumes_by_year:
         # The first table has an extra column for the volume units (eg Patient Days or Tests). The remainder do not.
@@ -51,6 +55,9 @@ def read_volume_data(filename, sheet):
             dept_wd_id = row.iloc[0]
             dept_name = row.iloc[1]
 
+            # Volume unit for this dept
+            unit = dept_id_to_unit.get(dept_wd_id, None)
+
             # Iterate over volume numbers in columns C:N. enumerate(..., start=1) results in month = [1..12]
             # Most tables have two non-data columns preceding data. col_offset above gives us the number of
             # extra non-data columns in this table
@@ -59,9 +66,9 @@ def read_volume_data(filename, sheet):
                 if pd.notnull(volume):
                     # Format month column like "2022-01"
                     month = f"{year:04d}-{month_num:02d}"
-                    data.append([dept_wd_id, dept_name, month, volume])
+                    data.append([dept_wd_id, dept_name, month, volume, unit])
 
-    return pd.DataFrame(data, columns=["dept_wd_id", "dept_name", "month", "volume"])
+    return pd.DataFrame(data, columns=["dept_wd_id", "dept_name", "month", data_col_name, "unit"])
 
 
 def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet):

@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from src.model import (
     Volume,
+    UOS,
     Budget,
     Hours,
     HoursByPayPeriod,
@@ -28,6 +29,7 @@ BASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 # Historical volume data is in the STATS worksheet of the Dashboard Supporting Data spreadsheet
 VOLUMES_FILE = os.path.join(BASE_PATH, "Dashboard Supporting Data 2024 v3.xlsx")
 VOLUMES_SHEET = "STATS"
+UOS_SHEET = "UOS"
 VOLUMES_BUDGET_SHEET = "Data"
 HRS_PER_VOLUME_SHEET = "Prod.MH UOS"
 
@@ -119,7 +121,8 @@ if __name__ == "__main__":
     logging.info(f"Created tables in {TMP_DB_FILE}")
 
     # Extract and perform basic transformation of data from spreadsheets
-    volumes_df = parse.read_volume_data(VOLUMES_FILE, VOLUMES_SHEET)
+    volumes_df = parse.read_volume_and_uos_data(VOLUMES_FILE, VOLUMES_SHEET, "volume")
+    uos_df = parse.read_volume_and_uos_data(VOLUMES_FILE, UOS_SHEET, "uos")
     budget_df = parse.read_budget_data(
         VOLUMES_FILE, VOLUMES_BUDGET_SHEET, HRS_PER_VOLUME_SHEET
     )
@@ -138,6 +141,7 @@ if __name__ == "__main__":
     # Load data into DB. Clear each table prior to loading from dataframe
     with Session(db_engine) as session:
         db.clear_table_and_insert_data(session, Volume, volumes_df)
+        db.clear_table_and_insert_data(session, UOS, uos_df)
         db.clear_table_and_insert_data(session, Budget, budget_df)
         db.clear_table_and_insert_data(
             session, HoursByPayPeriod, hours_by_pay_period_df

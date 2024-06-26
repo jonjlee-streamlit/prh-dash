@@ -13,6 +13,7 @@ from .model import (
     Metadata,
     SourceMetadata,
     Volume,
+    UOS,
     Budget,
     Hours,
     IncomeStmt,
@@ -29,6 +30,7 @@ class SourceData:
     """In-memory copy of DB tables"""
 
     volumes_df: pd.DataFrame = None
+    uos_df: pd.DataFrame = None
     budget_df: pd.DataFrame = None
     hours_df: pd.DataFrame = None
     income_stmt_df: pd.DataFrame = None
@@ -52,8 +54,8 @@ def from_db(db_file: str) -> SourceData:
         # Read metadata
         metadata = {
             "last_updated": session.query(Metadata.last_updated)
-            .order_by(Metadata.last_updated.desc())
-            .scalar(),
+                .order_by(Metadata.last_updated.desc())
+                .scalar(),
             "sources_updated": {
                 row.filename: row.modified for row in session.query(SourceMetadata)
             },
@@ -62,6 +64,7 @@ def from_db(db_file: str) -> SourceData:
     # Read dashboard data into dataframes
     dfs = {
         "volumes_df": pd.read_sql_table(Volume.__tablename__, engine),
+        "uos_df": pd.read_sql_table(UOS.__tablename__, engine),
         "budget_df": pd.read_sql_table(Budget.__tablename__, engine),
         "hours_df": pd.read_sql_table(Hours.__tablename__, engine),
         "income_stmt_df": pd.read_sql_table(IncomeStmt.__tablename__, engine),

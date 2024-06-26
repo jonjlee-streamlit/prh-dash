@@ -25,6 +25,17 @@ class Volume(Base):
     dept_name = mapped_column(String, nullable=True)
     month = mapped_column(String(7), nullable=False)
     volume = mapped_column(Integer, nullable=False)
+    unit = mapped_column(String, nullable=True)
+
+
+class UOS(Base):
+    __tablename__ = "uos"
+    id = mapped_column(Integer, primary_key=True)
+    dept_wd_id = mapped_column(String(10), nullable=False)
+    dept_name = mapped_column(String, nullable=True)
+    month = mapped_column(String(7), nullable=False)
+    uos = mapped_column(Integer, nullable=False)
+    unit = mapped_column(String, nullable=True)
 
 
 class Budget(Base):

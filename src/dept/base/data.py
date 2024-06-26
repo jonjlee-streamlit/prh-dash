@@ -50,9 +50,14 @@ def process(
     # Get department IDs that we will be matching
     wd_ids = _get_all_wd_ids(config if dept_id == "All" else dept_id)
 
-    # Sort volume data by time
+    # Group volume data by department and month
     volumes_df = src.volumes_df[src.volumes_df["dept_wd_id"].isin(wd_ids)]
     volumes = _calc_volumes_history(volumes_df)
+
+    # Group UOS data by department and month
+    uos_df = src.uos_df[src.uos_df["dept_wd_id"].isin(wd_ids)]
+    uos = _calc_uos_history(uos_df)
+
 
     # Organize income statement data into a human readable table grouped into categories
     income_stmt_df = src.income_stmt_df[src.income_stmt_df["dept_wd_id"].isin(wd_ids)]
@@ -65,7 +70,7 @@ def process(
     hours_ytm = _calc_hours_ytm(hours_df, month)
 
     # Pre-calculate statistics that are individual numbers, like overall revenue per encounter
-    stats = _calc_stats(wd_ids, settings, src, volumes, income_stmt_df, hours_df)
+    stats = _calc_stats(wd_ids, settings, src, volumes, uos, income_stmt_df, hours_df)
 
     return DeptData(
         dept=wd_ids,
@@ -99,11 +104,18 @@ def _get_all_wd_ids(id_list):
 
 def _calc_volumes_history(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Returns volumes for each month totaled across departments, sorted in reverse chronologic order by month
+    Returns volumes for each month totaled across all departments in data set, sorted in reverse chronologic order by month
     """
     df = df.groupby("month")["volume"].sum().reset_index()
     return df.sort_values(by=["month"], ascending=[False])
 
+def _calc_uos_history(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Same as _calc_volumes_history for UOS (unit of service). Returns UOS data for each month totaled across all departments in data set,
+    sorted in reverse chronologic order by month
+    """
+    df = df.groupby("month")["uos"].sum().reset_index()
+    return df.sort_values(by=["month"], ascending=[False])
 
 def _calc_hours_for_month(df: pd.DataFrame, month: str) -> pd.DataFrame:
     """
@@ -191,6 +203,7 @@ def _calc_stats(
     settings: dict,
     src: source_data.SourceData,
     volumes: pd.DataFrame,  # volumes for each sub-department, all months
+    uos: pd.DataFrame,  # Unit of service (UOS) for each sub-department, all months
     income_stmt_df: pd.DataFrame,  # all income statment data for sub-departments, all months
     hours: pd.DataFrame,  # prod/non-prod hours and FTE for each sub-department
 ) -> dict:
