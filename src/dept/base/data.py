@@ -265,9 +265,10 @@ def _calc_stats(
             "hourly_rate",
         ]
     ].sum()
+    # If there is more than one department, recalculate values that cannot just be summed across depts
     if len(wd_ids) > 1:
-        # If there is more than one department, recalculate values that cannot just be summed across depts
-        if budget_df["budget_volume"] > 0:
+        # If volumes not available or hours per volume is based on UOS, zero it out for now
+        if uos.empty and budget_df["budget_volume"] > 0:
             budget_df["budget_prod_hrs_per_volume"] = (
                 budget_df["budget_prod_hrs"] / budget_df["budget_volume"]
             )
