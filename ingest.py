@@ -121,8 +121,8 @@ if __name__ == "__main__":
     logging.info(f"Created tables in {TMP_DB_FILE}")
 
     # Extract and perform basic transformation of data from spreadsheets
-    volumes_df = parse.read_volume_and_uos_data(VOLUMES_FILE, VOLUMES_SHEET, "volume")
-    uos_df = parse.read_volume_and_uos_data(VOLUMES_FILE, UOS_SHEET, "uos")
+    volumes_df = parse.read_volume_and_uos_data(VOLUMES_FILE, VOLUMES_SHEET)
+    uos_df = parse.read_volume_and_uos_data(VOLUMES_FILE, UOS_SHEET)
     budget_df = parse.read_budget_data(
         VOLUMES_FILE, VOLUMES_BUDGET_SHEET, HRS_PER_VOLUME_SHEET
     )

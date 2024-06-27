@@ -73,8 +73,10 @@ def show(config: configs.DeptConfig, settings: dict, data: data.DeptData):
         anchor="kpis",
         divider="gray",
     )
+    st.caption("\* Unit of Service (UOS) is " + s["uos_unit"])
     _show_kpi(settings, data)
     st.header("Volumes", anchor="volumes", divider="gray")
+    st.caption("\* Volume unit is " + s["volume_unit"])
     _show_volumes(settings, data)
     st.header("Hours and FTE", anchor="hours", divider="gray")
     _show_hours(settings, data)
@@ -156,15 +158,30 @@ def _show_volumes(settings: dict, data: data.DeptData):
         return st.write("No data for department")
 
     month = datetime.strptime(settings["month"], "%Y-%m").strftime("%b %Y")
+    prior_year_month = datetime.strptime(
+        data.stats["prior_year_month"], "%Y-%m"
+    ).strftime("%b %Y")
 
-    st.subheader("Summary")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric(f"Month ({month})", f"{data.stats['month_volume']:,}")
-    col2.metric(f"Target for Month", f"{data.stats['month_budget_volume']:,.0f}")
-    col1.metric(f"Year to {month}", f"{data.stats['ytm_volume']:,}")
-    col2.metric(
+    col1, col2 = st.columns(2)
+    col1 = col1.container(border=True)
+    col2 = col2.container(border=True)
+    col1.subheader("Volume")
+    col2.subheader("UOS")
+
+    vol_col1, vol_col2 = col1.columns(2)
+    vol_col1.metric(f"Month ({month})", f"{data.stats['month_volume']:,}")
+    vol_col2.metric(f"Target for Month", f"{data.stats['month_budget_volume']:,.0f}")
+    vol_col1.metric(f"Year to {month}", f"{data.stats['ytm_volume']:,}")
+    vol_col2.metric(
         f"Target for Year to {month}", f"{data.stats['ytm_budget_volume']:,.0f}"
     )
+
+    uos_col1, uos_col2 = col2.columns(2)
+    uos_col1.metric(f"Month ({month})", f"{data.stats['month_uos']:,}")
+    uos_col2.metric(
+        f"Prior Year ({prior_year_month})", f"{data.stats['prior_year_month_uos']:,}"
+    )
+    uos_col1.metric(f"Year to {month}", f"{data.stats['ytm_uos']:,}")
 
     # Show graph of historical volumes. Allow user to select how many months to show.
     st.subheader("Volumes by Month")

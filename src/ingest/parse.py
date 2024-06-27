@@ -13,7 +13,7 @@ PAY_PERIOD_ANCHOR_DATE = {
 }
 
 
-def read_volume_and_uos_data(filename, sheet, data_col_name):
+def read_volume_and_uos_data(filename, sheet):
     """
     Read the Excel sheet with volume data into a dataframe
     """
@@ -68,7 +68,9 @@ def read_volume_and_uos_data(filename, sheet, data_col_name):
                     month = f"{year:04d}-{month_num:02d}"
                     data.append([dept_wd_id, dept_name, month, volume, unit])
 
-    return pd.DataFrame(data, columns=["dept_wd_id", "dept_name", "month", data_col_name, "unit"])
+    return pd.DataFrame(
+        data, columns=["dept_wd_id", "dept_name", "month", "volume", "unit"]
+    )
 
 
 def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet):
