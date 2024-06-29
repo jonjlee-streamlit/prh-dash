@@ -9,6 +9,7 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 from .configs import DeptConfig
 from ... import source_data, income_statment, static_data
+from ... import util
 
 
 @dataclass(frozen=True)
@@ -212,44 +213,53 @@ def _calc_stats(
 
     # Get the currently selected month and year from the left sidebar, and its corresponding month from the last year
     sel_month = settings["month"]
-    sel_year = sel_month[:4]
-    prior_year_month = f"{str(int(sel_year)-1)}-{sel_month[5:]}"
+    sel_year, month_of_sel_month = util.split_YYYY_MM(sel_month)
+    prior_year = sel_year - 1
+    month_in_prior_year = f"{prior_year:04d}-{month_of_sel_month:02d}"
 
     # Get the latest month that we will display depending on volume and income statement data available
-    month_max = _max_month_to_display(volumes, uos, income_stmt_df)
-    [month_max_year, month_max_month] = month_max.split("-")
+    month_max, month_max_year, month_max_month = _max_month_to_display(
+        volumes, uos, income_stmt_df
+    )
 
-    # If UOS data is available, use it for KPIs. Otherwise, use volume data.
-    kpi_volume_df = volumes if uos.empty else uos
+    # Initialize all volume and uos stats to zero
     kpi_ytd_volume = 0
     month_volume, ytm_volume = 0, 0
-    month_uos, ytm_uos, prior_year_month_uos, prior_year_uos = 0, 0, 0, 0
+    month_uos, ytm_uos, month_uos_in_prior_year, prior_year_uos = 0, 0, 0, 0
     uos_unit, volume_unit = "undefined", "undefined"
 
-    # Get the volume and UOS for the selected month / year. The volumes table has
+    # If UOS data is available, use it for KPIs. Otherwise, use volume data.
+    kpi_uos_df = volumes if uos.empty else uos
+
+    # Get the volume and UOS for the selected month / year. These tables have
     # one number in the volume column for each department per month
     if not volumes.empty:
         month_volume = volumes.loc[volumes["month"] == sel_month, "volume"].sum()
         ytm_volume = volumes.loc[
-            volumes["month"].str.startswith(sel_year) & (volumes["month"] <= sel_month),
+            volumes["month"].str.startswith(str(sel_year))
+            & (volumes["month"] <= sel_month),
             "volume",
         ].sum()
         volume_unit = volumes.at[0, "unit"]
     if not uos.empty:
-        prior_year_month = f"{str(int(sel_year)-1)}-{sel_month[5:]}"
         month_uos = uos.loc[uos["month"] == sel_month, "volume"].sum()
-        prior_year_month_uos = uos.loc[uos["month"] == prior_year_month, "volume"].sum()
+        month_uos_in_prior_year = uos.loc[
+            uos["month"] == month_in_prior_year, "volume"
+        ].sum()
+        ttl_uos_in_prior_year = uos.loc[
+            uos["month"].str.startswith(str(prior_year)), "volume"
+        ].sum()
         ytm_uos = uos.loc[
-            uos["month"].str.startswith(sel_year) & (uos["month"] <= sel_month),
+            uos["month"].str.startswith(str(sel_year)) & (uos["month"] <= sel_month),
             "volume",
         ].sum()
         uos_unit = uos.at[0, "unit"]
 
     # Get the denominator for KPI calculations - either YTD volume or UOS
-    if not kpi_volume_df.empty:
-        kpi_ytd_volume = kpi_volume_df.loc[
-            kpi_volume_df["month"].str.startswith(month_max_year)
-            & (kpi_volume_df["month"] <= month_max),
+    if not kpi_uos_df.empty:
+        kpi_ytd_volume = kpi_uos_df.loc[
+            kpi_uos_df["month"].str.startswith(str(month_max_year))
+            & (kpi_uos_df["month"] <= month_max),
             "volume",
         ].sum()
 
@@ -261,19 +271,24 @@ def _calc_stats(
             "budget_fte",
             "budget_prod_hrs",
             "budget_volume",
-            "budget_prod_hrs_per_volume",
+            "budget_uos",
+            "budget_prod_hrs_per_uos",
             "hourly_rate",
         ]
     ].sum()
     # If there is more than one department, recalculate values that cannot just be summed across depts
     if len(wd_ids) > 1:
-        # If volumes not available or hours per volume is based on UOS, zero it out for now
-        if uos.empty and budget_df["budget_volume"] > 0:
-            budget_df["budget_prod_hrs_per_volume"] = (
+        # Prefer using UOS data to volume. If no data available, zero out the budgeted hrs per UOS
+        if budget_df["budget_uos"] > 0:
+            budget_df["budget_prod_hrs_per_uos"] = (
+                budget_df["budget_prod_hrs"] / budget_df["budget_uos"]
+            )
+        elif uos.empty and budget_df["budget_volume"] > 0:
+            budget_df["budget_prod_hrs_per_uos"] = (
                 budget_df["budget_prod_hrs"] / budget_df["budget_volume"]
             )
         else:
-            budget_df["budget_prod_hrs_per_volume"] = 0
+            budget_df["budget_prod_hrs_per_uos"] = 0
 
         # Calculate average of hourly rates - this is not entirely accurate, since pay/hours are not distributed
         # evenly across departments. When possible, this will be recalulated below using (YTD salary / YTD hours)
@@ -281,7 +296,11 @@ def _calc_stats(
 
     # Get the YTD budgeted volume based on the proportion of the annual budgeted volume
     # for the number of months of the year for which we have revenue / income statement information
-    ytd_budget_volume = budget_df.at["budget_volume"] * (int(month_max_month) / 12)
+    # Prefer UOS data if available, otherwise use volume
+    budget_volume_for_kpi = (
+        budget_df.at["budget_uos"] if not uos.empty else budget_df.at["budget_volume"]
+    )
+    ytd_budget_volume_for_kpi = budget_volume_for_kpi * (int(month_max_month) / 12)
 
     # Hours data - table has one row per department with columns for types of hours,
     # eg. productive, non-productive, overtime, ...
@@ -320,16 +339,17 @@ def _calc_stats(
 
     # Dates used to calculate stats
     s["kpi_month_max"] = month_max
-    s["prior_year_month"] = prior_year_month
+    s["month_in_prior_year"] = month_in_prior_year
 
     # Volumes and budgets for the selected month and YTD show up on the Volumes tab, Summary section
     s["month_volume"] = month_volume
     s["ytm_volume"] = ytm_volume
+    s["month_budget_volume"] = budget_df.at["budget_volume"] / 12
+    s["ytm_budget_volume"] = budget_df.at["budget_volume"] * (month_of_sel_month / 12)
     s["month_uos"] = month_uos
     s["ytm_uos"] = ytm_uos
-    s["prior_year_month_uos"] = prior_year_month_uos
-    s["month_budget_volume"] = budget_df.at["budget_volume"] / 12
-    s["ytm_budget_volume"] = budget_df.at["budget_volume"] * (int(sel_month[-2:]) / 12)
+    s["prior_year_month_uos"] = month_uos_in_prior_year
+    s["prior_year_uos"] = ttl_uos_in_prior_year
 
     # Budgeted FTE shows up as a threshold line on the FTE graph
     s["budget_fte"] = budget_df.at["budget_fte"]
@@ -338,12 +358,12 @@ def _calc_stats(
     s["revenue_per_volume"] = ytd_revenue / kpi_ytd_volume if kpi_ytd_volume > 0 else 0
     s["expense_per_volume"] = ytd_expense / kpi_ytd_volume if kpi_ytd_volume > 0 else 0
 
-    if uos.empty and ytd_budget_volume and ytd_budget_revenue and ytd_budget_expense:
-        s["target_revenue_per_volume"] = ytd_budget_revenue / ytd_budget_volume
+    if ytd_budget_volume_for_kpi and ytd_budget_revenue and ytd_budget_expense:
+        s["target_revenue_per_volume"] = ytd_budget_revenue / ytd_budget_volume_for_kpi
         s["variance_revenue_per_volume"] = math.trunc(
             (s["revenue_per_volume"] / s["target_revenue_per_volume"] - 1) * 100
         )
-        s["target_expense_per_volume"] = ytd_budget_expense / ytd_budget_volume
+        s["target_expense_per_volume"] = ytd_budget_expense / ytd_budget_volume_for_kpi
         s["variance_expense_per_volume"] = math.trunc(
             (s["expense_per_volume"] / s["target_expense_per_volume"] - 1) * 100
         )
@@ -354,7 +374,7 @@ def _calc_stats(
         s["variance_expense_per_volume"] = 0
 
     s["hours_per_volume"] = ytd_prod_hours / kpi_ytd_volume if kpi_ytd_volume > 0 else 0
-    s["target_hours_per_volume"] = budget_df.at["budget_prod_hrs_per_volume"]
+    s["target_hours_per_volume"] = budget_df.at["budget_prod_hrs_per_uos"]
     s["variance_hours_per_volume"] = (
         s["target_hours_per_volume"] - s["hours_per_volume"]
     )
@@ -395,4 +415,8 @@ def _max_month_to_display(
     income_stmt_month_max = income_stmt_df["month"].max()
 
     month_max = min(kpi_volumes_max, income_stmt_month_max)
-    return cur_month if pd.isna(month_max) else month_max
+    month_max = cur_month if pd.isna(month_max) else month_max
+
+    # Return month as a comparable string, like 2020-01, as well as year and month
+    year, month = util.split_YYYY_MM(month_max)
+    return month_max, year, month

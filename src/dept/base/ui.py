@@ -157,10 +157,9 @@ def _show_volumes(settings: dict, data: data.DeptData):
     ):
         return st.write("No data for department")
 
-    month = datetime.strptime(settings["month"], "%Y-%m").strftime("%b %Y")
-    prior_year_month = datetime.strptime(
-        data.stats["prior_year_month"], "%Y-%m"
-    ).strftime("%b %Y")
+    month = util.YYYY_MM_to_month_str(settings["month"])
+    prior_year_month = util.YYYY_MM_to_month_str(data.stats["month_in_prior_year"])
+    prior_year, _ = util.split_YYYY_MM(data.stats["month_in_prior_year"])
 
     col1, col2 = st.columns(2)
     col1 = col1.container(border=True)
@@ -177,11 +176,15 @@ def _show_volumes(settings: dict, data: data.DeptData):
     )
 
     uos_col1, uos_col2 = col2.columns(2)
-    uos_col1.metric(f"Month ({month})", f"{data.stats['month_uos']:,}")
+    uos_col1.metric(f"Month ({month})", f"{data.stats['month_uos']:,.0f}")
     uos_col2.metric(
-        f"Prior Year ({prior_year_month})", f"{data.stats['prior_year_month_uos']:,}"
+        f"Prior Year to {prior_year_month}",
+        f"{data.stats['prior_year_month_uos']:,.0f}",
     )
-    uos_col1.metric(f"Year to {month}", f"{data.stats['ytm_uos']:,}")
+    uos_col1.metric(f"Year to {month}", f"{data.stats['ytm_uos']:,.0f}")
+    uos_col2.metric(
+        f"Prior Year Total ({prior_year})", f"{data.stats['prior_year_uos']:,.0f}"
+    )
 
     # Show graph of historical volumes. Allow user to select how many months to show.
     st.subheader("Volumes by Month")
@@ -224,6 +227,7 @@ def _show_hours(settings: dict, data: data.DeptData):
             options=["Compare", "12 Months", "24 Months", "5 Years", "All"],
             index=1,
         )
+        st.caption("\* Excludes traveler hours")
 
     # Filter out any data before selected display period or after the latest month which has full data available
     df = _filter_by_period(data.hours, sel_period)

@@ -1,6 +1,7 @@
 """
 Utility functions
 """
+
 import typing
 import streamlit as st
 import pandas as pd
@@ -402,26 +403,61 @@ def period_str_to_month_strs(dates: str) -> typing.Tuple[str, str]:
     else:
         return None, None
 
+
+def split_YYYY_MM(date_str):
+    """
+    Split a month string in the format "2023-01" into year and month numbers.
+    If input is invalid, will return pd.nan for both values.
+    """
+    try:
+        year, month = date_str.split("-")
+        return int(year), int(month)
+    except ValueError:
+        return pd.NA, pd.NA
+
+
+def YYYY_MM_to_month_str(date_str):
+    """
+    Convert a month string in the format "2023-01" to a month string in the format "Jan 2023"
+    """
+    year, month = split_YYYY_MM(date_str)
+    return f"{datetime(year, month, 1):%b %Y}"
+
+
 # Group a set of data with two columns by month from Jan to Dec. month_col should be the name of a column
 # in the format "2020-01" and value_col the name of the data column.
 def group_data_by_month(src, month_col, value_col):
-    # Split source month column in the form 2020-01 into month and year numbers. Year should be a string 
+    # Split source month column in the form 2020-01 into month and year numbers. Year should be a string
     # instead of number so it can be used as a categorical classifier for plotly graphs
     df = pd.DataFrame(columns=["Month", value_col, "Year"])
     _first_day_of_month = pd.to_datetime(src[month_col])
     df["Month"] = _first_day_of_month.dt.month_name()
-    df["Year"] = _first_day_of_month.dt.year.astype('str')
+    df["Year"] = _first_day_of_month.dt.year.astype("str")
     df[value_col] = src[value_col]
 
     # Sort data by year, so that bars show up in order of year
     df = df.sort_values(by="Year")
 
     # Specify order of months, since we can't sort alphanumerically
-    new_order = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-    df['Month'] = pd.Categorical(df['Month'], categories=new_order, ordered=True)
-    df = df.sort_values(['Month', 'Year'])
+    new_order = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+    df["Month"] = pd.Categorical(df["Month"], categories=new_order, ordered=True)
+    df = df.sort_values(["Month", "Year"])
 
     return df
+
 
 # -----------------------------------
 # Finance functions

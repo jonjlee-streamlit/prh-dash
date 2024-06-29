@@ -166,6 +166,7 @@ def aggrid_income_stmt(df, month=None):
     # Finally show data table
     AgGrid(
         df,
+        height=810,
         gridOptions=gb.build(),
         # columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS,
         allow_unsafe_jscode=True,
