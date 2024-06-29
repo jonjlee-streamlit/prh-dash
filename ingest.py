@@ -16,6 +16,10 @@ from src.model import (
 from src.source_data import DEFAULT_DB_FILE
 from src.ingest import db, parse, transform, sanity
 
+# Opt into pandas 3 behavior for replace() and fillna(), where columns of object dtype are NOT changed to something more specific, 
+# like int/float/str. This option can be removed once upgrading pandas 2-> 3.
+pd.set_option("future.no_silent_downcasting", True)
+
 # Logging definitions
 logging.basicConfig(level=logging.INFO)
 SHOW_SQL_IN_LOG = False
@@ -124,7 +128,7 @@ if __name__ == "__main__":
     volumes_df = parse.read_volume_and_uos_data(VOLUMES_FILE, VOLUMES_SHEET)
     uos_df = parse.read_volume_and_uos_data(VOLUMES_FILE, UOS_SHEET)
     budget_df = parse.read_budget_data(
-        VOLUMES_FILE, VOLUMES_BUDGET_SHEET, HRS_PER_VOLUME_SHEET
+        VOLUMES_FILE, VOLUMES_BUDGET_SHEET, HRS_PER_VOLUME_SHEET, UOS_SHEET
     )
     income_stmt_df = parse.read_income_stmt_data(income_stmt_files)
     historical_hours_df = parse.read_historical_hours_and_fte_data(

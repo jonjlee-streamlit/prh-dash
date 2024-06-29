@@ -73,7 +73,7 @@ def read_volume_and_uos_data(filename, sheet):
     )
 
 
-def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet):
+def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet, uos_sheet):
     """
     Read the sheet from the Dashboard Supporting Data Excel workbook with budgeted hours and volume data into a dataframe
     """
@@ -97,21 +97,36 @@ def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet):
         "Current YTD FTE",
     ]
 
+    # Read goal Prod hrs / UOS from dedicated sheet
     logging.info(f"Reading {filename}, {hrs_per_volume_sheet}")
     xl_data = pd.read_excel(filename, sheet_name=hrs_per_volume_sheet, header=None)
     hrs_per_volume_df = util.df_get_table(xl_data, start_cell="A2", has_header_row=True)
+
+    # Temporarily using prior year data for budgeted UOS. 
+    # Pull second table from UOS sheet and keep first (WD ID) and last (total) columns
+    logging.info(f"Reading {filename}, {uos_sheet}")
+    xl_data = pd.read_excel(filename, sheet_name=uos_sheet, header=None)
+    prior_yr_uos_df = util.df_get_table(xl_data, start_cell="R3", has_header_row=False)
+    prior_yr_uos_df = prior_yr_uos_df.iloc[:, [0, -1]]
+    prior_yr_uos_df.columns = ["ID", "budget_uos"]
+
 
     # Transform
     # ---------
     # Drop columns without an Workday ID
     budget_df.dropna(subset=["dept_wd_id"], inplace=True)
-    # Join volumes and budgeted hours tables based on workday ID
+
+    # Join volumes, budgeted hours, and UOS tables based on workday ID
     budget_df = budget_df.join(hrs_per_volume_df.set_index("ID"), on="dept_wd_id")
+    budget_df = budget_df.join(prior_yr_uos_df.set_index("ID"), on="dept_wd_id")
+
+
     # Interpret NaN as 0 budgeted fte, hours, volume and hrs/volume
     budget_df["budget_fte"] = budget_df["budget_fte"].fillna(0)
     budget_df["budget_prod_hrs"] = budget_df["budget_prod_hrs"].fillna(0)
     budget_df["budget_volume"] = budget_df["budget_volume"].fillna(0)
-    budget_df["budget_prod_hrs_per_volume"] = budget_df["GOAL"].fillna(0)
+    budget_df["budget_uos"] = budget_df["budget_uos"].fillna(0)
+    budget_df["budget_prod_hrs_per_uos"] = budget_df["GOAL"].fillna(0)
     budget_df["hourly_rate"] = budget_df["hourly_rate"].fillna(0)
 
     return budget_df[
@@ -121,7 +136,8 @@ def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet):
             "budget_fte",
             "budget_prod_hrs",
             "budget_volume",
-            "budget_prod_hrs_per_volume",
+            "budget_uos",
+            "budget_prod_hrs_per_uos",
             "hourly_rate",
         ]
     ]
@@ -191,7 +207,7 @@ def read_income_stmt_data(files):
         # Add the month as a column
         income_stmt_df["month"] = month
 
-        # Replace all cells with "(Blank)" with actual empty string
+        # Replace all cells with "(Blank)" with actual empty string. 
         income_stmt_df = income_stmt_df.replace("(Blank)", "")
 
         # Reorder and retain columns corresponding to DB table
