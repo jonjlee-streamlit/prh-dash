@@ -207,11 +207,16 @@ def _show_hours(settings: dict, data: data.DeptData):
         return st.write("No data for this month")
 
     # Show productive / non-productive hours for month
-    st.subheader("Summary")
+    col1, col2 = st.columns(2)
     if data.hours_for_month is None or data.hours_for_month.shape[0] == 0:
         st.write("No data for this month")
     else:
-        figs.hours_table(data.month, data.hours_for_month, data.hours_ytm)
+        with col1:
+            st.subheader("Employees")
+            figs.hours_table(data.month, data.hours_for_month, data.hours_ytm)
+        with col2:
+            st.subheader("Contracted (Travelers)")
+            figs.contracted_hours_table(data.stats)
 
     # Show graph of historical FTE. Allow user to select how many months to show.
     st.write("&nbsp;")

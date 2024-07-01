@@ -69,8 +69,22 @@ def process(
     hours_for_month = _calc_hours_for_month(hours_df, month)
     hours_ytm = _calc_hours_ytm(hours_df, month)
 
+    # Summary table for contracted hours
+    contracted_hours_df = src.contracted_hours_df[
+        src.contracted_hours_df["dept_wd_id"].isin(wd_ids)
+    ]
+
     # Pre-calculate statistics that are individual numbers, like overall revenue per encounter
-    stats = _calc_stats(wd_ids, settings, src, volumes, uos, income_stmt_df, hours_df)
+    stats = _calc_stats(
+        wd_ids,
+        settings,
+        src,
+        volumes,
+        uos,
+        income_stmt_df,
+        hours_df,
+        contracted_hours_df,
+    )
 
     return DeptData(
         dept=wd_ids,
@@ -192,6 +206,13 @@ def _calc_hours_history(df: pd.DataFrame) -> pd.DataFrame:
     ]
 
 
+def _calc_contracted_hours(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Returns contracted hours for this year YTD (up to given last updated month, which is in spreadsheet)
+    """
+    return df
+
+
 def _calc_income_stmt_for_month(stmt: pd.DataFrame, month: str) -> pd.DataFrame:
     # Filter data for given month
     stmt = stmt[stmt["month"] == month]
@@ -207,6 +228,7 @@ def _calc_stats(
     uos: pd.DataFrame,  # Unit of service (UOS) for each sub-department, all months
     income_stmt_df: pd.DataFrame,  # all income statment data for sub-departments, all months
     hours: pd.DataFrame,  # prod/non-prod hours and FTE for each sub-department
+    contracted_hours_df: pd.DataFrame,  # traveler hours, currently pulled from manual entries in spreadsheet
 ) -> dict:
     """Precalculate statistics from raw data that will be displayed on dashboard"""
     s = {}
@@ -395,6 +417,39 @@ def _calc_stats(
     else:
         s["fte_variance"] = 0
         s["fte_variance_dollars"] = 0
+
+    # Contracted hours. This data is manually entered in the data spreadsheet currently, so we just
+    # provide the specific data points for last year and this year
+    year_for_contracted_hours = date.today().year
+    prior_year_for_contracted_hours = year_for_contracted_hours - 1
+    contracted_hours_this_year_df = contracted_hours_df.loc[
+        contracted_hours_df["year"] == year_for_contracted_hours,
+        ["hrs", "ttl_dept_hrs"],
+    ].sum()
+    contracted_hours_prior_year_df = contracted_hours_df.loc[
+        contracted_hours_df["year"] == prior_year_for_contracted_hours,
+        ["hrs", "ttl_dept_hrs"],
+    ].sum()
+    s["contracted_hours_month"] = (
+        f"{src.contracted_hours_updated_month} {year_for_contracted_hours}"
+    )
+    s["contracted_hours"] = contracted_hours_this_year_df["hrs"]
+    s["contracted_pct"] = (
+        0
+        if contracted_hours_this_year_df["ttl_dept_hrs"] == 0
+        else contracted_hours_this_year_df["hrs"]
+        / contracted_hours_this_year_df["ttl_dept_hrs"]
+        * 100
+    )
+    s["prior_year_for_contracted_hours"] = str(prior_year_for_contracted_hours)
+    s["prior_year_contracted_hours"] = contracted_hours_prior_year_df["hrs"]
+    s["prior_year_contracted_pct"] = (
+        0
+        if contracted_hours_prior_year_df["ttl_dept_hrs"] == 0
+        else contracted_hours_prior_year_df["hrs"]
+        / contracted_hours_prior_year_df["ttl_dept_hrs"]
+        * 100
+    )
 
     return s
 

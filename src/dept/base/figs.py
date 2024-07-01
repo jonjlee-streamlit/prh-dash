@@ -217,7 +217,7 @@ def hours_table(month, hours_for_month, hours_ytd):
     df = pd.DataFrame([hours_for_month, hours_ytd]).T.reset_index()
 
     # Convert month from format "2023-01" to "Jan 2023"
-    month = datetime.strptime(month, "%Y-%m").strftime("%b %Y")
+    month = util.YYYY_MM_to_month_str(month)
     df.columns = ["", f"Month ({month})", f"Year to {month}"]
 
     # Assign row headers
@@ -254,6 +254,65 @@ def hours_table(month, hours_for_month, hours_ytd):
                 },
                 {
                     "selector": "tr:last-child, tr:nth-last-child(2)",
+                    "props": [("font-weight", "bold")],
+                },
+            ]
+        )
+    )
+    st.markdown(styled_df.to_html(), unsafe_allow_html=True)
+
+
+def contracted_hours_table(stats):
+    # Populate data from stats into in each table cell
+    df = pd.DataFrame(
+        [
+            ["Hours", stats["contracted_hours"], stats["prior_year_contracted_hours"]],
+            [
+                "% of Productive Hours",
+                stats["contracted_pct"],
+                stats["prior_year_contracted_pct"],
+            ],
+            [
+                "Equivalent FTE",
+                stats["contracted_hours"] / 2080,
+                stats["prior_year_contracted_hours"] / 2080,
+            ],
+        ]
+    )
+
+    # Column headers
+    contracted_hours_month = stats["contracted_hours_month"]
+    prior_year_for_contracted_hours = stats["prior_year_for_contracted_hours"]
+    df.columns = [
+        "",
+        f"Year to {contracted_hours_month}",
+        f"Prior Year ({prior_year_for_contracted_hours})",
+    ]
+
+    # Create borders and row bolding
+    left_margin = 25
+    styled_df = (
+        df.style.hide(axis=0)
+        .format("{:,.1f}", subset=df.columns[1:].tolist())
+        .set_table_styles(
+            [
+                {"selector": "", "props": [("margin-left", str(left_margin) + "px")]},
+                {"selector": "tr", "props": [("border-top", "0px")]},
+                {
+                    "selector": "th, td",
+                    "props": [("border", "0px"), ("text-align", "right")],
+                },
+                {"selector": "td", "props": [("padding", "3px 13px")]},
+                {
+                    "selector": "td:nth-child(2), td:nth-child(3)",
+                    "props": [("border-bottom", "1px solid black")],
+                },
+                {
+                    "selector": "tr:last-child td:nth-child(2), tr:last-child td:nth-child(3)",
+                    "props": [("border-bottom", "2px solid black")],
+                },
+                {
+                    "selector": "tr:last-child",
                     "props": [("font-weight", "bold")],
                 },
             ]

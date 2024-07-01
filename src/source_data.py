@@ -1,6 +1,7 @@
 """
 Source data as in-memory copy of all DB tables as dataframes
 """
+
 import logging
 import os
 import pandas as pd
@@ -16,6 +17,7 @@ from .model import (
     UOS,
     Budget,
     Hours,
+    ContractedHours,
     IncomeStmt,
 )
 
@@ -33,11 +35,13 @@ class SourceData:
     uos_df: pd.DataFrame = None
     budget_df: pd.DataFrame = None
     hours_df: pd.DataFrame = None
+    contracted_hours_df: pd.DataFrame = None
     income_stmt_df: pd.DataFrame = None
 
     # Metadata
     last_updated: datetime = None
     sources_updated: dict = field(default_factory=dict)
+    contracted_hours_updated_month: str = None
 
 
 @st.cache_data(show_spinner=False)
@@ -54,8 +58,11 @@ def from_db(db_file: str) -> SourceData:
         # Read metadata
         metadata = {
             "last_updated": session.query(Metadata.last_updated)
-                .order_by(Metadata.last_updated.desc())
-                .scalar(),
+            .order_by(Metadata.last_updated.desc())
+            .scalar(),
+            "contracted_hours_updated_month": session.query(
+                Metadata.contracted_hours_updated_month
+            ).scalar(),
             "sources_updated": {
                 row.filename: row.modified for row in session.query(SourceMetadata)
             },
@@ -67,6 +74,7 @@ def from_db(db_file: str) -> SourceData:
         "uos_df": pd.read_sql_table(UOS.__tablename__, engine),
         "budget_df": pd.read_sql_table(Budget.__tablename__, engine),
         "hours_df": pd.read_sql_table(Hours.__tablename__, engine),
+        "contracted_hours_df": pd.read_sql_table(ContractedHours.__tablename__, engine),
         "income_stmt_df": pd.read_sql_table(IncomeStmt.__tablename__, engine),
     }
 
