@@ -247,7 +247,7 @@ def _calc_stats(
     # Initialize all volume and uos stats to zero
     kpi_ytd_volume = 0
     month_volume, ytm_volume = 0, 0
-    month_uos, ytm_uos, month_uos_in_prior_year, prior_year_uos = 0, 0, 0, 0
+    month_uos, ytm_uos, month_uos_in_prior_year, ttl_uos_in_prior_year = 0, 0, 0, 0
     uos_unit, volume_unit = "undefined", "undefined"
 
     # If UOS data is available, use it for KPIs. Otherwise, use volume data.
@@ -467,10 +467,11 @@ def _max_month_to_display(
     cur_month = f"{date.today().year:04d}-{date.today().month:02d}"
     kpi_volumes = volumes if uos.empty else uos
     kpi_volumes_max = kpi_volumes["month"].max()
+    kpi_volumes_max = "" if pd.isna(kpi_volumes_max) else kpi_volumes_max
     income_stmt_month_max = income_stmt_df["month"].max()
 
     month_max = min(kpi_volumes_max, income_stmt_month_max)
-    month_max = cur_month if pd.isna(month_max) else month_max
+    month_max = cur_month if month_max == "" else month_max
 
     # Return month as a comparable string, like 2020-01, as well as year and month
     year, month = util.split_YYYY_MM(month_max)
