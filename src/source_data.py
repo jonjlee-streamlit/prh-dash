@@ -6,10 +6,12 @@ import logging
 import os
 import pandas as pd
 import streamlit as st
+import requests
 from dataclasses import dataclass, field
 from datetime import datetime
 from sqlalchemy import create_engine, text as sql_text
 from sqlalchemy.orm import Session
+from . import encrypt
 from .model import (
     Metadata,
     SourceMetadata,
@@ -80,3 +82,25 @@ def from_db(db_file: str) -> SourceData:
 
     engine.dispose()
     return SourceData(**metadata, **dfs)
+
+
+def fetch_source_file_to_disk(file, url, key, force=False):
+    """
+    Fetch source data from URL, decrypt, and store to disk if not already present.
+    If force is True, always fetch.
+    """
+    if not os.path.exists(file) or force:
+        if not (url and key):
+            logging.info(f"Unable to fetch remote data file. URL and key required.")
+            return
+
+        # Fetch source data from URL
+        logging.info(f"Fetching data from {url}")
+        res = requests.get(url)
+        if res.status_code == 200:
+            # Decrypt and write to disk
+            data = encrypt.decrypt(res.content, key)
+            with open(file, "wb") as f:
+                f.write(data)
+        else:
+            st.write(f"Unable to fetch data file, status code {res.status_code}.")

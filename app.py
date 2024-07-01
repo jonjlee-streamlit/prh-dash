@@ -7,6 +7,11 @@ def run():
     # Fetch source data - do this before auth to ensure all requests to app cause data refresh
     # Read, parse, and cache (via @st.cache_data) source data
     with st.spinner("Initializing..."):
+        source_data.fetch_source_file_to_disk(
+            source_data.DEFAULT_DB_FILE,
+            st.secrets.get("data_url"),
+            st.secrets.get("data_key"),
+        )
         src_data = source_data.from_db(source_data.DEFAULT_DB_FILE)
 
     # Handle routing based on query parameters
