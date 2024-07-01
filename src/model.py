@@ -9,6 +9,7 @@ class Metadata(Base):
     __tablename__ = "meta"
     id = mapped_column(Integer, primary_key=True)
     last_updated = mapped_column(DateTime)
+    contracted_hours_updated_month = mapped_column(String, nullable=True)
 
 
 class SourceMetadata(Base):
@@ -63,6 +64,16 @@ class Hours(Base):
     nonprod_hrs = mapped_column(Float, nullable=False)
     total_hrs = mapped_column(Float, nullable=False)
     total_fte = mapped_column(Float, nullable=False)
+
+
+class ContractedHours(Base):
+    __tablename__ = "contracted_hours"
+    id = mapped_column(Integer, primary_key=True)
+    dept_wd_id = mapped_column(String(10), nullable=False)
+    dept_name = mapped_column(String, nullable=True)
+    year = mapped_column(Integer, nullable=False)
+    hrs = mapped_column(Float, nullable=True)
+    ttl_dept_hrs = mapped_column(Float, nullable=False)
 
 
 class HoursByPayPeriod(Base):

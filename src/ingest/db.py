@@ -35,7 +35,7 @@ def clear_table_and_insert_data(session, table, df, df_column_order=None):
     )
 
 
-def update_meta(engine, modified):
+def update_meta(engine, modified, contracted_hours_updated_month):
     """
     Populate the sources_meta table with metadata for the source files
     """
@@ -47,8 +47,13 @@ def update_meta(engine, modified):
         session.query(SourceMetadata).delete()
         session.commit()
 
-        # Set last ingest time
-        session.add(Metadata(last_updated=datetime.now()))
+        # Set last ingest time and other metadata fields
+        session.add(
+            Metadata(
+                last_updated=datetime.now(),
+                contracted_hours_updated_month=contracted_hours_updated_month,
+            )
+        )
 
         # Store last modified timestamps for ingested files
         for file, modified_time in modified.items():

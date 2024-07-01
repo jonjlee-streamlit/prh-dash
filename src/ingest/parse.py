@@ -102,14 +102,13 @@ def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet, uos_sheet):
     xl_data = pd.read_excel(filename, sheet_name=hrs_per_volume_sheet, header=None)
     hrs_per_volume_df = util.df_get_table(xl_data, start_cell="A2", has_header_row=True)
 
-    # Temporarily using prior year data for budgeted UOS. 
+    # Temporarily using prior year data for budgeted UOS.
     # Pull second table from UOS sheet and keep first (WD ID) and last (total) columns
     logging.info(f"Reading {filename}, {uos_sheet}")
     xl_data = pd.read_excel(filename, sheet_name=uos_sheet, header=None)
     prior_yr_uos_df = util.df_get_table(xl_data, start_cell="R3", has_header_row=False)
     prior_yr_uos_df = prior_yr_uos_df.iloc[:, [0, -1]]
     prior_yr_uos_df.columns = ["ID", "budget_uos"]
-
 
     # Transform
     # ---------
@@ -119,7 +118,6 @@ def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet, uos_sheet):
     # Join volumes, budgeted hours, and UOS tables based on workday ID
     budget_df = budget_df.join(hrs_per_volume_df.set_index("ID"), on="dept_wd_id")
     budget_df = budget_df.join(prior_yr_uos_df.set_index("ID"), on="dept_wd_id")
-
 
     # Interpret NaN as 0 budgeted fte, hours, volume and hrs/volume
     budget_df["budget_fte"] = budget_df["budget_fte"].fillna(0)
@@ -141,6 +139,52 @@ def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet, uos_sheet):
             "hourly_rate",
         ]
     ]
+
+
+def read_contracted_hours_data(filename, sheet):
+    """
+    Read sheet from the Dashboard Supporting Data Excel workbook with Traveler's Hours
+    """
+    # Extract table
+    logging.info(f"Reading {filename}, {sheet}")
+    xl_data = pd.read_excel(filename, sheet_name=sheet, header=None)
+    contracted_hours_updated_month = util.df_get_val_or_range(xl_data, "G1")
+    xl_df = util.df_get_table(xl_data, start_cell="A4", has_header_row=True)
+
+    # Rename columns, which appear in groups of 3 for eac year:
+    #   YYYY PRH ProdHrs YE, YYYY Travelers YE, YYYY TOTAL
+    # to:
+    #   YYYY_prh, YYYY, YYYY_ttl
+    col_names = ["dept_wd_id", "dept_name"]
+    years = []
+    for i in range(2, xl_df.shape[1], 3):
+        year = xl_df.columns[i].split(" ")[0]
+        years.append(year)
+        col_names.append(f"{year}_prh")
+        col_names.append(f"{year}_hrs")
+        col_names.append(f"{year}_ttl")
+    xl_df.columns = col_names
+
+    # Transform
+    # ---------
+    # Unpivot Excel data from columns:
+    #   ID, dept_name, YYYY_hrs, YYYY_ttl, YYYY_pct
+    # to:
+    #   ID, dept_name, year, hours, pct
+    df = pd.DataFrame(
+        columns=["dept_wd_id", "dept_name", "year", "hrs", "ttl_dept_hrs"]
+    )
+    for idx, row in xl_df.iterrows():
+        for year in years:
+            df.loc[len(df)] = {
+                "dept_wd_id": row["dept_wd_id"],
+                "dept_name": row["dept_name"],
+                "year": year,
+                "hrs": row[f"{year}_hrs"],
+                "ttl_dept_hrs": row[f"{year}_ttl"],
+            }
+
+    return contracted_hours_updated_month, df
 
 
 def read_income_stmt_data(files):
@@ -207,7 +251,7 @@ def read_income_stmt_data(files):
         # Add the month as a column
         income_stmt_df["month"] = month
 
-        # Replace all cells with "(Blank)" with actual empty string. 
+        # Replace all cells with "(Blank)" with actual empty string.
         income_stmt_df = income_stmt_df.replace("(Blank)", "")
 
         # Reorder and retain columns corresponding to DB table

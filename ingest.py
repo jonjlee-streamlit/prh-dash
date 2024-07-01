@@ -10,13 +10,14 @@ from src.model import (
     UOS,
     Budget,
     Hours,
+    ContractedHours,
     HoursByPayPeriod,
     IncomeStmt,
 )
 from src.source_data import DEFAULT_DB_FILE
 from src.ingest import db, parse, transform, sanity
 
-# Opt into pandas 3 behavior for replace() and fillna(), where columns of object dtype are NOT changed to something more specific, 
+# Opt into pandas 3 behavior for replace() and fillna(), where columns of object dtype are NOT changed to something more specific,
 # like int/float/str. This option can be removed once upgrading pandas 2-> 3.
 pd.set_option("future.no_silent_downcasting", True)
 
@@ -36,6 +37,7 @@ VOLUMES_SHEET = "STATS"
 UOS_SHEET = "UOS"
 VOLUMES_BUDGET_SHEET = "Data"
 HRS_PER_VOLUME_SHEET = "Prod.MH UOS"
+CONTRACTED_HRS_SHEET = "ProdHrs"
 
 # The Natural Class subdir contains income statment in one Excel file per month, eg,
 # ./Natural Class/2022/(01) Jan 2022 Natural Class.xlsx
@@ -130,6 +132,9 @@ if __name__ == "__main__":
     budget_df = parse.read_budget_data(
         VOLUMES_FILE, VOLUMES_BUDGET_SHEET, HRS_PER_VOLUME_SHEET, UOS_SHEET
     )
+    contracted_hours_updated_month, contracted_hours_df = (
+        parse.read_contracted_hours_data(VOLUMES_FILE, CONTRACTED_HRS_SHEET)
+    )
     income_stmt_df = parse.read_income_stmt_data(income_stmt_files)
     historical_hours_df = parse.read_historical_hours_and_fte_data(
         HISTORICAL_HOURS_FILE, HISTORICAL_HOURS_YEAR
@@ -151,13 +156,14 @@ if __name__ == "__main__":
             session, HoursByPayPeriod, hours_by_pay_period_df
         )
         db.clear_table_and_insert_data(session, Hours, hours_by_month_df)
+        db.clear_table_and_insert_data(session, ContractedHours, contracted_hours_df)
         db.clear_table_and_insert_data(session, IncomeStmt, income_stmt_df)
 
     # Update last ingest time and modified times for source data files
     modified = {
         file: datetime.fromtimestamp(os.path.getmtime(file)) for file in source_files
     }
-    db.update_meta(db_engine, modified)
+    db.update_meta(db_engine, modified, contracted_hours_updated_month)
 
     # Move new database in place
     db_engine.dispose()

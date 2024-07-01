@@ -151,10 +151,16 @@ def df_get_table(
     row_start_idx = row_start_idx - 1
     col_start_idx = col_start_idx - 1
 
-    # Determine columns range of table by finding the first empty cell by column
+    # First row with data is the starting row, unless there is a header row
+    first_data_row_idx = row_start_idx + 1 if has_header_row else row_start_idx
+
+    # Determine columns range of table by finding the first empty cell by column.
+    # Find the column with both empty header (if exists) and first data row
     col_end = df.shape[1]
     for col in range(col_start_idx, df.shape[1]):
-        if pd.isna(df.iloc[row_start_idx, col]):
+        header_val = df.iloc[row_start_idx, col]
+        first_row_val = df.iloc[first_data_row_idx, col]
+        if pd.isna(header_val) and pd.isna(first_row_val):
             col_end = col
             break
 
