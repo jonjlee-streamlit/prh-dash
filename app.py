@@ -20,6 +20,8 @@ def run():
     # Check for access to update / API resources first
     if route_id == route.UPDATE:
         return update.show_page()
+    elif route_id == route.FETCH:
+        return force_fetch_data()
     elif route_id == route.CLEAR_CACHE:
         return clear_cache()
 
@@ -43,6 +45,22 @@ def clear_cache():
     st.cache_data.clear()
     return st.markdown(
         'Cache cleared. <a href="/" target="_self">Return to dashboard.</a>',
+        unsafe_allow_html=True,
+    )
+
+
+def force_fetch_data():
+    """
+    Force re-fetch of source data from remote URL
+    """
+    source_data.fetch_source_file_to_disk(
+        source_data.DEFAULT_DB_FILE,
+        st.secrets.get("data_url"),
+        st.secrets.get("data_key"),
+        force=True,
+    )
+    return st.markdown(
+        'Data re-fetched. <a href="/" target="_self">Return to dashboard.</a>',
         unsafe_allow_html=True,
     )
 

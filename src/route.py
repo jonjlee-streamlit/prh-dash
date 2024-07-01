@@ -6,6 +6,7 @@ import streamlit as st
 
 DEFAULT = "default"
 UPDATE = "update"
+FETCH = "fetch"
 
 # IDs for department dashboards
 ALL_CLINICS = "clinics"
@@ -148,6 +149,8 @@ def route_by_query(query_params: dict) -> str:
     api = query_params.get("api")
     if update == "1":
         return UPDATE
+    if update == "2":
+        return FETCH
     if api and api in API:
         return api
     if dept and dept in DEPTS:
