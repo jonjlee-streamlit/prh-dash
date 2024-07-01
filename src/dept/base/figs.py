@@ -193,7 +193,7 @@ def volumes_fig(src, group_by_month):
     else:
         # Display as normal time series data
         df = src.copy()
-        df.columns = ["Month", "Volume"]
+        df = df.rename(columns={"month": "Month", "volume": "Volume"})
         color = None
 
     fig = px.bar(df, x="Month", y="Volume", text="Volume", color=color, barmode="group")
