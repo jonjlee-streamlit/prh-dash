@@ -324,11 +324,26 @@ def _calc_stats(
     )
     ytd_budget_volume_for_kpi = budget_volume_for_kpi * (int(month_max_month) / 12)
 
+    # Contracted hours data. This is separate from the hours data in the hours dataframe, which represents employee-only hours.
+    # This table has has one row per department per year.
+    year_for_contracted_hours = date.today().year
+    month_for_contracted_hours = f"{src.contracted_hours_updated_month} {year_for_contracted_hours}"
+    prior_year_for_contracted_hours = year_for_contracted_hours - 1
+    contracted_hours_this_year_df = contracted_hours_df.loc[
+        contracted_hours_df["year"] == year_for_contracted_hours,
+        ["hrs", "ttl_dept_hrs"],
+    ].sum()
+    contracted_hours_prior_year_df = contracted_hours_df.loc[
+        contracted_hours_df["year"] == prior_year_for_contracted_hours,
+        ["hrs", "ttl_dept_hrs"],
+    ].sum()
+
     # Hours data - table has one row per department with columns for types of hours,
     # eg. productive, non-productive, overtime, ...
     hours_ytd = _calc_hours_ytm(hours, month_max)
-    ytd_prod_hours = hours_ytd["prod_hrs"].sum()
+    ytd_prod_hours = hours_ytd["prod_hrs"].sum() + contracted_hours_this_year_df["hrs"]
     ytd_hours = hours_ytd["total_hrs"].sum()
+
 
     # Get YTD revenue, expense, and salary data from the income statement for month_max, where we have volume data.
     # The most straight-forward way to do this is to generate an actual income statement
@@ -420,19 +435,7 @@ def _calc_stats(
 
     # Contracted hours. This data is manually entered in the data spreadsheet currently, so we just
     # provide the specific data points for last year and this year
-    year_for_contracted_hours = date.today().year
-    prior_year_for_contracted_hours = year_for_contracted_hours - 1
-    contracted_hours_this_year_df = contracted_hours_df.loc[
-        contracted_hours_df["year"] == year_for_contracted_hours,
-        ["hrs", "ttl_dept_hrs"],
-    ].sum()
-    contracted_hours_prior_year_df = contracted_hours_df.loc[
-        contracted_hours_df["year"] == prior_year_for_contracted_hours,
-        ["hrs", "ttl_dept_hrs"],
-    ].sum()
-    s["contracted_hours_month"] = (
-        f"{src.contracted_hours_updated_month} {year_for_contracted_hours}"
-    )
+    s["contracted_hours_month"] = month_for_contracted_hours
     s["contracted_hours"] = contracted_hours_this_year_df["hrs"]
     s["contracted_pct"] = (
         0
