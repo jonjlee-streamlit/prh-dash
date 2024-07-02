@@ -341,7 +341,8 @@ def _calc_stats(
     # Hours data - table has one row per department with columns for types of hours,
     # eg. productive, non-productive, overtime, ...
     hours_ytd = _calc_hours_ytm(hours, month_max)
-    ytd_prod_hours = hours_ytd["prod_hrs"].sum() + contracted_hours_this_year_df["hrs"]
+    ytd_prod_hours = hours_ytd["prod_hrs"].sum()
+    ytd_prod_hours_incl_contracted = ytd_prod_hours + contracted_hours_this_year_df["hrs"]
     ytd_hours = hours_ytd["total_hrs"].sum()
 
 
@@ -410,7 +411,7 @@ def _calc_stats(
         s["target_expense_per_volume"] = 0
         s["variance_expense_per_volume"] = 0
 
-    s["hours_per_volume"] = ytd_prod_hours / kpi_ytd_volume if kpi_ytd_volume > 0 else 0
+    s["hours_per_volume"] = ytd_prod_hours_incl_contracted / kpi_ytd_volume if kpi_ytd_volume > 0 else 0
     s["target_hours_per_volume"] = budget_df.at["budget_prod_hrs_per_uos"]
     s["variance_hours_per_volume"] = (
         s["target_hours_per_volume"] - s["hours_per_volume"]
