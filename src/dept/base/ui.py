@@ -178,7 +178,7 @@ def _show_volumes(settings: dict, data: data.DeptData):
     uos_col1, uos_col2 = col2.columns(2)
     uos_col1.metric(f"Month ({month})", f"{data.stats['month_uos']:,.0f}")
     uos_col2.metric(
-        f"Prior Year to {prior_year_month}",
+        f"Prior Year ({prior_year_month})",
         f"{data.stats['prior_year_month_uos']:,.0f}",
     )
     uos_col1.metric(f"Year to {month}", f"{data.stats['ytm_uos']:,.0f}")
