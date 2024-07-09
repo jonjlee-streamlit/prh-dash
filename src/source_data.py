@@ -102,5 +102,8 @@ def fetch_source_file_to_disk(file, url, key, force=False):
             data = encrypt.decrypt(res.content, key)
             with open(file, "wb") as f:
                 f.write(data)
+
+            # Force data module to reread data from disk on next run
+            st.cache_data.clear()
         else:
             st.write(f"Unable to fetch data file, status code {res.status_code}.")
