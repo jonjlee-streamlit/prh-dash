@@ -327,7 +327,9 @@ def _calc_stats(
     # Contracted hours data. This is separate from the hours data in the hours dataframe, which represents employee-only hours.
     # This table has has one row per department per year.
     year_for_contracted_hours = date.today().year
-    month_for_contracted_hours = f"{src.contracted_hours_updated_month} {year_for_contracted_hours}"
+    month_for_contracted_hours = (
+        f"{src.contracted_hours_updated_month} {year_for_contracted_hours}"
+    )
     prior_year_for_contracted_hours = year_for_contracted_hours - 1
     contracted_hours_this_year_df = contracted_hours_df.loc[
         contracted_hours_df["year"] == year_for_contracted_hours,
@@ -344,7 +346,6 @@ def _calc_stats(
     ytd_prod_hours = hours_ytd["prod_hrs"].sum() + contracted_hours_this_year_df["hrs"]
     ytd_hours = hours_ytd["total_hrs"].sum() + contracted_hours_this_year_df["hrs"]
 
-
     # Get YTD revenue, expense, and salary data from the income statement for month_max, where we have volume data.
     # The most straight-forward way to do this is to generate an actual income statement
     # because the income statement definition already defines all the line items to total
@@ -359,13 +360,18 @@ def _calc_stats(
     # and last, or -1 column (YTD Budget)
     df_revenue = income_stmt_ytd[
         income_stmt_ytd["hier"].str.startswith("Operating Revenues|Patient Revenues")
+        | income_stmt_ytd["hier"].str.startswith("Operating Revenues|Other")
     ].sum()
     df_expense = income_stmt_ytd[income_stmt_ytd["hier"] == "Total Operating Expenses"]
     # Salaries are for employees, Locum Tenens + Temp Labor are totals for contracted hours
     df_salary = income_stmt_ytd[
-        income_stmt_ytd["hier"].str.startswith("Expenses|Salaries") |
-        income_stmt_ytd["hier"].str.startswith("Expenses|Professional Fees|60221:Temp Labor") |
-        income_stmt_ytd["hier"].str.startswith("Expenses|Professional Fees|60222:Locum Tenens")
+        income_stmt_ytd["hier"].str.startswith("Expenses|Salaries")
+        | income_stmt_ytd["hier"].str.startswith(
+            "Expenses|Professional Fees|60221:Temp Labor"
+        )
+        | income_stmt_ytd["hier"].str.startswith(
+            "Expenses|Professional Fees|60222:Locum Tenens"
+        )
     ].sum()
     ytd_revenue = df_revenue.iloc[-2]
     ytd_budget_revenue = df_revenue.iloc[-1]
