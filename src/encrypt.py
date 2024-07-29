@@ -41,6 +41,10 @@ def decrypt_file(file: str, outfile: str, key: str):
 # and -encrypt <file> or -decrypt <file> to encrypt / decrypt a file to disk
 # Use -out <file> to specify output filename, otherwise will default to <file>.enc or <file>.dec
 if __name__ == "__main__":
+    if "-help" in sys.argv:
+        print('Accepted parameters: -key, -encrypt <file>, -decrypt <file>, -out <file>.\nIf -out is not specified, will default to <file>.enc or <file>.dec')
+        exit(0)
+
     # Accept the -key parameter, or generate a new key
     if "-key" in sys.argv:
         key = sys.argv[sys.argv.index("-key") + 1]
