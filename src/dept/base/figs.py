@@ -277,8 +277,8 @@ def contracted_hours_table(stats):
             ],
             [
                 "Equivalent FTE",
-                stats["contracted_hours"] / 2080,
-                stats["prior_year_contracted_hours"] / 2080,
+                stats["contracted_fte"],
+                stats["prior_year_contracted_fte"],
             ],
         ]
     )

@@ -5,7 +5,7 @@ Transform source data into department specific data that can be displayed on das
 import pandas as pd
 import math
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from .configs import DeptConfig
 from ... import source_data, income_statment, static_data
@@ -330,6 +330,7 @@ def _calc_stats(
     month_for_contracted_hours = (
         f"{src.contracted_hours_updated_month} {year_for_contracted_hours}"
     )
+    month_num_for_contracted_hours = datetime.strptime(src.contracted_hours_updated_month, "%B").month
     prior_year_for_contracted_hours = year_for_contracted_hours - 1
     contracted_hours_this_year_df = contracted_hours_df.loc[
         contracted_hours_df["year"] == year_for_contracted_hours,
@@ -453,6 +454,7 @@ def _calc_stats(
         / contracted_hours_this_year_df["ttl_dept_hrs"]
         * 100
     )
+    s["contracted_fte"] = s["contracted_hours"] / static_data.FTE_HOURS_PER_YEAR / (month_num_for_contracted_hours / 12)
     s["prior_year_for_contracted_hours"] = str(prior_year_for_contracted_hours)
     s["prior_year_contracted_hours"] = contracted_hours_prior_year_df["hrs"]
     s["prior_year_contracted_pct"] = (
@@ -462,6 +464,7 @@ def _calc_stats(
         / contracted_hours_prior_year_df["ttl_dept_hrs"]
         * 100
     )
+    s["prior_year_contracted_fte"] = s["prior_year_contracted_hours"] / static_data.FTE_HOURS_PER_YEAR
 
     return s
 
