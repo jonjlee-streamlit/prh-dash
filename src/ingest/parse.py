@@ -184,6 +184,9 @@ def read_contracted_hours_data(filename, sheet):
                 "ttl_dept_hrs": row[f"{year}_ttl"],
             }
 
+    # Interpret NaN as 0 for total hours
+    df["ttl_dept_hrs"] = df["ttl_dept_hrs"].fillna(0)
+
     return contracted_hours_updated_month, df
 
 

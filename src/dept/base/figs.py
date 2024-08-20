@@ -230,11 +230,14 @@ def hours_table(month, hours_for_month, hours_ytd):
         "Total FTE",
     ]
 
+    # Round all numbers in table except for the first column (labels). Last row should have 1 decimal place
+    df.iloc[:-1, 1:] = df.iloc[:-1, 1:].applymap(lambda x: f"{x:.0f}")
+    df.iloc[-1, 1:] = df.iloc[-1, 1:].apply(lambda x: f"{x:.1f}")
+
     # Create borders and row bolding
     left_margin = 25
     styled_df = (
         df.style.hide(axis=0)
-        .format("{:,.0f}", subset=df.columns[1:].tolist())
         .set_table_styles(
             [
                 {"selector": "", "props": [("margin-left", str(left_margin) + "px")]},
