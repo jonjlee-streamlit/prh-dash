@@ -159,7 +159,6 @@ def _show_volumes(settings: dict, data: data.DeptData):
 
     month = util.YYYY_MM_to_month_str(settings["month"])
     prior_year_month = util.YYYY_MM_to_month_str(data.stats["month_in_prior_year"])
-    prior_year, _ = util.split_YYYY_MM(data.stats["month_in_prior_year"])
 
     col1, col2 = st.columns(2)
     col1 = col1.container(border=True)
@@ -183,7 +182,7 @@ def _show_volumes(settings: dict, data: data.DeptData):
     )
     uos_col1.metric(f"Year to {month}", f"{data.stats['ytm_uos']:,.0f}")
     uos_col2.metric(
-        f"Prior Year Total ({prior_year})", f"{data.stats['prior_year_uos']:,.0f}"
+        f"Prior Year to {prior_year_month}", f"{data.stats['prior_year_ytm_uos']:,.0f}"
     )
 
     # Show graph of historical volumes. Allow user to select how many months to show.

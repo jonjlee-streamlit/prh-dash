@@ -247,7 +247,7 @@ def _calc_stats(
     # Initialize all volume and uos stats to zero
     kpi_ytd_volume = 0
     month_volume, ytm_volume = 0, 0
-    month_uos, ytm_uos, month_uos_in_prior_year, ttl_uos_in_prior_year = 0, 0, 0, 0
+    month_uos, ytm_uos, month_uos_in_prior_year, ytm_uos_in_prior_year = 0, 0, 0, 0
     uos_unit, volume_unit = "undefined", "undefined"
 
     # If UOS data is available, use it for KPIs. Otherwise, use volume data.
@@ -268,8 +268,8 @@ def _calc_stats(
         month_uos_in_prior_year = uos.loc[
             uos["month"] == month_in_prior_year, "volume"
         ].sum()
-        ttl_uos_in_prior_year = uos.loc[
-            uos["month"].str.startswith(str(prior_year)), "volume"
+        ytm_uos_in_prior_year = uos.loc[
+            uos["month"].str.startswith(str(prior_year))& (uos["month"] <= month_in_prior_year), "volume"
         ].sum()
         ytm_uos = uos.loc[
             uos["month"].str.startswith(str(sel_year)) & (uos["month"] <= sel_month),
@@ -397,7 +397,7 @@ def _calc_stats(
     s["month_uos"] = month_uos
     s["ytm_uos"] = ytm_uos
     s["prior_year_month_uos"] = month_uos_in_prior_year
-    s["prior_year_uos"] = ttl_uos_in_prior_year
+    s["prior_year_ytm_uos"] = ytm_uos_in_prior_year
 
     # Budgeted FTE shows up as a threshold line on the FTE graph
     s["budget_fte"] = budget_df.at["budget_fte"]
