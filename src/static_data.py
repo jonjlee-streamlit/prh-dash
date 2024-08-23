@@ -3,7 +3,7 @@ Statically defined data, such as mappings from ID to department names
 """
 # Ratios to convert hours into FTE equivalent
 FTE_HOURS_PER_YEAR = 2080
-FTE_HOURS_PER_DAY = FTE_HOURS_PER_YEAR / 365
+FTE_HOURS_PER_LEAP_YEAR = 2088
 
 # Map of Workday IDs to the canonical department or cost center name
 WDID_TO_DEPT_NAME = {

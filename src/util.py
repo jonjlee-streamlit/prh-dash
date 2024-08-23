@@ -2,13 +2,15 @@
 Utility functions
 """
 
+import calendar
 import typing
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from openpyxl.utils import cell
-import re
+from . import static_data
 
 
 # ----------------------------------
@@ -355,17 +357,6 @@ def period_str_to_dates(dates: str) -> typing.Tuple[datetime, datetime]:
         return None, None
 
 
-def month_str_to_dates(month_str: str) -> typing.Tuple[datetime, datetime]:
-    """
-    Convert a month string, such as "Jan 2023" to start and end datetime objects.
-    Returns a tuple (first datetime, last datetime).
-    """
-    first_day = datetime.strptime(month_str, "%b %Y")
-    last_day = first_day + relativedelta(day=31)
-    last_day = last_day.replace(hour=23, minute=59, second=59, microsecond=999)
-    return (first_day, last_day)
-
-
 def period_str_to_month_strs(dates: str) -> typing.Tuple[str, str]:
     """
     Convert a time period string, such as "Month to Date", "Last 12 Months", etc
@@ -428,6 +419,37 @@ def YYYY_MM_to_month_str(date_str):
     """
     year, month = split_YYYY_MM(date_str)
     return f"{datetime(year, month, 1):%b %Y}"
+
+def last_day_of_month(month_str: str) -> datetime:
+    """
+    Given a string in the format "YYYY-MM", return the last day of that month.
+    """
+    year, month = split_YYYY_MM(month_str)
+    if month == 12:
+        next_month = datetime(year + 1, 1, 1)
+    else:
+        next_month = datetime(year, month + 1, 1)
+    last_day = next_month - timedelta(days=1)
+    return last_day
+
+def pct_of_year_through_date(month_str: str) -> float:
+    """
+    Given a month string in the format "2023-01", return the percentage of the year that has passed up to that date.
+    """
+    year, _month = split_YYYY_MM(month_str)
+    
+    # Calculate days in year and days from Jan 1 to last of month. Use datetime library to correctly account for leap years
+    first_day_of_year = datetime(year, 1, 1)
+    last_day_of_year = datetime(year, 12, 31)
+    last_day = last_day_of_month(month_str)
+    days_in_year = (last_day_of_year - first_day_of_year).days + 1
+    days_in_year_through_month = (last_day - first_day_of_year).days + 1
+
+    # Return percent of days through end of the given month
+    return days_in_year_through_month / days_in_year
+
+def fte_hrs_in_year(year: int) -> int:
+    return static_data.FTE_HOURS_PER_YEAR if calendar.isleap(year) else static_data.FTE_HOURS_PER_LEAP_YEAR
 
 
 # Group a set of data with two columns by month from Jan to Dec. month_col should be the name of a column
