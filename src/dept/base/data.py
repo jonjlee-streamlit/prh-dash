@@ -327,7 +327,7 @@ def _calc_stats(
     # Contracted hours data. This is separate from the hours data in the hours dataframe, which represents employee-only hours.
     # This table has has one row per department per year.
     year_for_contracted_hours = date.today().year
-    month_num_for_contracted_hours = datetime.strptime(src.contracted_hours_updated_month[:3], "%b").month
+    month_num_for_contracted_hours = datetime.strptime(src.contracted_hours_updated_month[:10], "%Y-%m-%d").month
     month_for_contracted_hours = f"{year_for_contracted_hours:4d}-{month_num_for_contracted_hours:02d}"
 
     prior_year_for_contracted_hours = year_for_contracted_hours - 1
