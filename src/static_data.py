@@ -222,6 +222,7 @@ ALIASES_TO_WDID = {
     "other non-op rev/exp": "CC_92000",
     "Oxygen": "CC_70520",
     "Pain Management": "CC_70270",
+    "CSS_Pain Clinic": "CC_70270",
     "Palouse Health Center": "CC_72775",
     "CPC_Palouse Health Center": "CC_72775",
     "PRHCN PALOUSE HEALTH CENTER": "CC_72775",
