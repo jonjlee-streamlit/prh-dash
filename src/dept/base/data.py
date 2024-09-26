@@ -333,11 +333,11 @@ def _calc_stats(
     prior_year_for_contracted_hours = year_for_contracted_hours - 1
     contracted_hours_this_year_df = contracted_hours_df.loc[
         contracted_hours_df["year"] == year_for_contracted_hours,
-        ["hrs", "ttl_dept_hrs"],
+        ["hrs"],
     ].sum()
     contracted_hours_prior_year_df = contracted_hours_df.loc[
         contracted_hours_df["year"] == prior_year_for_contracted_hours,
-        ["hrs", "ttl_dept_hrs"],
+        ["hrs"],
     ].sum()
     contracted_fte_this_year = contracted_hours_this_year_df["hrs"] / (util.fte_hrs_in_year(year_for_contracted_hours) * util.pct_of_year_through_date(month_for_contracted_hours))
     contracted_fte_prior_year = contracted_hours_prior_year_df["hrs"] / util.fte_hrs_in_year(prior_year_for_contracted_hours)
@@ -448,23 +448,9 @@ def _calc_stats(
     # provide the specific data points for last year and this year
     s["contracted_hours_month"] = util.YYYY_MM_to_month_str(month_for_contracted_hours)
     s["contracted_hours"] = contracted_hours_this_year_df["hrs"]
-    s["contracted_pct"] = (
-        0
-        if contracted_hours_this_year_df["ttl_dept_hrs"] == 0
-        else contracted_hours_this_year_df["hrs"]
-        / contracted_hours_this_year_df["ttl_dept_hrs"]
-        * 100
-    )
     s["contracted_fte"] = contracted_fte_this_year
     s["prior_year_for_contracted_hours"] = str(prior_year_for_contracted_hours)
     s["prior_year_contracted_hours"] = contracted_hours_prior_year_df["hrs"]
-    s["prior_year_contracted_pct"] = (
-        0
-        if contracted_hours_prior_year_df["ttl_dept_hrs"] == 0
-        else contracted_hours_prior_year_df["hrs"]
-        / contracted_hours_prior_year_df["ttl_dept_hrs"]
-        * 100
-    )
     s["prior_year_contracted_fte"] = contracted_fte_prior_year
 
     return s

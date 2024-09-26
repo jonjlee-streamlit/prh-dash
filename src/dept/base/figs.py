@@ -271,11 +271,6 @@ def contracted_hours_table(stats):
         [
             ["Hours", stats["contracted_hours"], stats["prior_year_contracted_hours"]],
             [
-                "% of Productive Hours",
-                stats["contracted_pct"],
-                stats["prior_year_contracted_pct"],
-            ],
-            [
                 "Equivalent FTE",
                 stats["contracted_fte"],
                 stats["prior_year_contracted_fte"],
