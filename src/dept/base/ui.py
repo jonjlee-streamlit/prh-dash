@@ -231,7 +231,7 @@ def _show_hours(settings: dict, data: data.DeptData):
             options=["Compare", "12 Months", "24 Months", "5 Years", "All"],
             index=1,
         )
-        st.caption("\* Excludes traveler hours")
+        st.caption("\* FTE and Hours graphs exclude travelers")
 
     # Filter out any data before selected display period or after the latest month which has full data available
     df = _filter_by_period(data.hours, sel_period)
