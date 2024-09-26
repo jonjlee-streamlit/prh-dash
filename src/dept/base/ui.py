@@ -76,7 +76,7 @@ def show(config: configs.DeptConfig, settings: dict, data: data.DeptData):
     st.caption("\* Unit of Service (UOS) is " + s["uos_unit"])
     _show_kpi(settings, data)
     st.header("Volumes", anchor="volumes", divider="gray")
-    st.caption("\* Volume unit is " + s["volume_unit"])
+    st.caption("\* Volume unit is " + s["volume_unit"] + "  \n\* Unit of Service (UOS) is " + s["uos_unit"])
     _show_volumes(settings, data)
     st.header("Hours and FTE", anchor="hours", divider="gray")
     _show_hours(settings, data)
