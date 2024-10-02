@@ -11,12 +11,13 @@ openpyxl = "*"
 streamlit-aggrid = "*"
 sqlalchemy = "*"
 cryptography = "*"
+prefect = {extras = ["aws", "shell"], version = "*"}
 
 [dev-packages]
 black = "*"
 
 [requires]
-python_version = "3.11"
+python_version = "3"
 
 [pipenv]
 allow_prereleases = true
