@@ -1,4 +1,5 @@
 import os
+import pathlib
 from dotenv import load_dotenv
 from prefect import flow, task
 from prefect_shell import ShellOperation
@@ -12,6 +13,9 @@ load_dotenv()
 PRH_DASH_SOURCE_DIR = os.environ.get("PRH_DASH_SOURCE_DIR")
 PRH_DASH_CLOUDFLARE_R2_URL = os.environ.get("PRH_DASH_CLOUDFLARE_R2_URL")
 PRH_DASH_CLOUDFLARE_R2_BUCKET = os.environ.get("PRH_DASH_CLOUDFLARE_R2_BUCKET")
+
+# Update path to include worker user's local bin
+os.environ["PATH"] = f"{os.environ['PATH']}:{pathlib.Path.home()}/.local/bin"
 
 
 @task
