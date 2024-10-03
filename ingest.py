@@ -39,11 +39,13 @@ CONTRACTED_HRS_SHEET = "ProdHrs"
 # The historical hours data returned by get_file_paths() as historical_hours_file contains data for 2022
 HISTORICAL_HOURS_YEAR = 2022
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Ingest data into the database.")
     parser.add_argument("data_dir", help="Path to the data directory")
     parser.add_argument("-o", "--out", help="Output database file path")
     return parser.parse_args()
+
 
 def get_file_paths(base_path):
     # Historical volume data is ion the Dashboard Supporting Data spreadsheet
@@ -57,10 +59,13 @@ def get_file_paths(base_path):
     #   ./PayPeriod/2023/PP#1 2023 Payroll_Productivity_by_Cost_Center.xlsx
     # In addition, historical data for 2022 PP#1-25, which includes the clinic network, is lumped together a separate file:
     #   ./PayPeriod/2023/PP#1-PP#25 Payroll Productivity.xlsx
-    historical_hours_file = os.path.join(base_path, "PayPeriod", "2022", "PP#1-PP#26 Payroll Productivity.xlsx")
+    historical_hours_file = os.path.join(
+        base_path, "PayPeriod", "2022", "PP#1-PP#26 Payroll Productivity.xlsx"
+    )
     hours_path = os.path.join(base_path, "PayPeriod")
 
     return volumes_file, income_stmt_path, hours_path, historical_hours_file
+
 
 def sanity_check_data_dir(base_path, volumes_file, income_stmt_path, hours_path):
     """
@@ -102,12 +107,17 @@ def find_data_files(path, exclude=None):
 
     return sorted(ret)
 
+
 def main():
     args = parse_arguments()
     base_path = args.data_dir
     output_db_file = args.out or DEFAULT_DB_FILE
 
-    volumes_file, income_stmt_path, hours_path, historical_hours_file = get_file_paths(base_path)
+    logging.info(f"Data dir: {base_path}, output: {output_db_file}")
+
+    volumes_file, income_stmt_path, hours_path, historical_hours_file = get_file_paths(
+        base_path
+    )
 
     # Sanity check data directory expected location and files
     if not sanity_check_data_dir(base_path, volumes_file, income_stmt_path, hours_path):
@@ -185,4 +195,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main();
+    main()
