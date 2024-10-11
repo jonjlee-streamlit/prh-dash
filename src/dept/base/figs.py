@@ -8,7 +8,7 @@ from ... import util
 
 
 # Display a gauge chart with 0% variance in the middle
-def kpi_gauge(title, variance_pct, yellow_threshold, red_threshold, gauge_max):
+def kpi_gauge(title, variance_pct, yellow_threshold, red_threshold, gauge_max, key=None):
     color = "#238823"
     textcolor = color
     if abs(variance_pct) >= red_threshold:
@@ -70,7 +70,7 @@ def kpi_gauge(title, variance_pct, yellow_threshold, red_threshold, gauge_max):
             height=100,
         )
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key=key)
 
 
 def aggrid_income_stmt(df, month=None):

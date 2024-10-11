@@ -103,7 +103,7 @@ def _show_kpi(settings: dict, data: data.DeptData):
 
     col1, col2, col3, col4 = st.columns([2, 2, 2, 8])
     with col3:
-        figs.kpi_gauge("% Variance", s["variance_revenue_per_volume"], 5, 10, 12)
+        figs.kpi_gauge("% Variance", s["variance_revenue_per_volume"], 5, 10, 12, key="variance_revenue_per_volume")
     col1.metric(
         "Revenue per UOS",
         f"${s['revenue_per_volume']:,.0f}",
@@ -115,7 +115,7 @@ def _show_kpi(settings: dict, data: data.DeptData):
 
     col1, col2, col3, col4 = st.columns([2, 2, 2, 8])
     with col3:
-        figs.kpi_gauge("% Variance", s["variance_expense_per_volume"], 5, 10, 12)
+        figs.kpi_gauge("% Variance", s["variance_expense_per_volume"], 5, 10, 12, key="variance_expense_per_volume")
     col1.metric(
         "Expense per UOS",
         f"${s['expense_per_volume']:,.0f}",
@@ -128,7 +128,7 @@ def _show_kpi(settings: dict, data: data.DeptData):
     st.subheader("Productivity")
     col1, col2, col3, col4 = st.columns([2, 2, 2, 8])
     with col3:
-        figs.kpi_gauge("% Variance", s["variance_hours_per_volume_pct"], 5, 10, 12)
+        figs.kpi_gauge("% Variance", s["variance_hours_per_volume_pct"], 5, 10, 12, key="variance_hours_per_volume_pct")
     col1.metric("Hours per UOS", f"{s['hours_per_volume']:,.2f}")
     col2.metric("Target Hours per UOS", f"{s['target_hours_per_volume']:,.2f}")
 
