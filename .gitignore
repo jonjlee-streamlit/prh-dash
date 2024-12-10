@@ -3,6 +3,7 @@ data/
 **/node_modules
 *.rdp
 *.sqlite3
+*.sqlite3.enc
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
