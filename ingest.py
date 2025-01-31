@@ -42,7 +42,9 @@ HISTORICAL_HOURS_YEAR = 2022
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Ingest data into the database.")
-    parser.add_argument("data_dir", help="Path to the data directory")
+    parser.add_argument(
+        "data_dir", help="Path to the data directory", nargs="?", default="./data"
+    )
     parser.add_argument("-o", "--out", help="Output database file path")
     return parser.parse_args()
 

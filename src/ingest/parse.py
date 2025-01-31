@@ -379,6 +379,12 @@ def read_hours_and_fte_data(files):
         (row_start, _col) = util.df_find_by_column(xl_data, "Department Number")
         hours_df = xl_data.iloc[row_start:]
         hours_df = util.df_convert_first_row_to_column_names(hours_df)
+
+        # Drop columns before "Department Number" column (some of the later reports after 2025 have a "Period" column in column 1)
+        dept_num_col_idx = hours_df.columns.get_loc("Department Number")
+        hours_df = hours_df.iloc[:, dept_num_col_idx:]
+
+        # Rename subsequent columns after Department Number and Department Name
         hours_df.columns.values[2] = "reg_hrs"
         hours_df.columns.values[3] = "CALLBK - CALLBACK"
         hours_df.columns.values[4] = "DBLTME - DOUBLETIME"
