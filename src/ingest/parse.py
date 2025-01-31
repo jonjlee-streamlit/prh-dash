@@ -81,7 +81,7 @@ def read_budget_data(filename, budget_sheet, hrs_per_volume_sheet, uos_sheet):
     logging.info(f"Reading {filename}, {budget_sheet}")
     xl_data = pd.read_excel(filename, sheet_name=budget_sheet, header=None)
     budget_df = util.df_get_tables_by_rows(
-        xl_data, cols="B:K", start_row_idx=6, limit=1
+        xl_data, cols="A:J", start_row_idx=6, limit=1
     )
     budget_df = budget_df[0]
     budget_df.columns = [
