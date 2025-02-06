@@ -39,15 +39,15 @@ def get_flow_name():
 
 
 @flow(retries=0, retry_delay_seconds=300, name=get_flow_name())
-async def prh_dash_ingest():
+def prh_dash_ingest():
     # Set working dir to project root
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     print("Running from:", os.getcwd())
 
-    data_key = (await Secret.load("prh-dash-data-key")).get()
-    aws_creds = await AwsCredentials.load("cloudflare-r2-dataset")
+    data_key = (Secret.load("prh-dash-data-key")).get()
+    aws_creds = AwsCredentials.load("cloudflare-r2-dataset")
 
-    async with ShellOperation(
+    with ShellOperation(
         commands=[
             "pipenv install",
             f'pipenv run python ingest.py "{PRH_DASH_SOURCE_DIR}" -o {TMP_OUTPUT_DB}',
@@ -56,8 +56,8 @@ async def prh_dash_ingest():
         env={"PIPENV_CUSTOM_VENV_NAME": PRH_DASH_VENV_NAME},
         stream_output=True,
     ) as op:
-        proc = await op.trigger()
-        await proc.wait_for_completion()
+        proc = op.trigger()
+        proc.wait_for_completion()
         if proc.return_code != 0:
             raise Exception(f"Failed, exit code {proc.return_code}")
 
@@ -65,11 +65,11 @@ async def prh_dash_ingest():
     s3_bucket = S3Bucket(
         bucket_name=PRH_DASH_CLOUDFLARE_R2_BUCKET, credentials=aws_creds
     )
-    out = await s3_bucket.aupload_from_path(
+    out = s3_bucket.upload_from_path(
         PRH_DASH_ENCRYPTED_DB_FILE, PRH_DASH_ENCRYPTED_DB_FILE
     )
     print("Uploaded to S3:", out)
 
 
 if __name__ == "__main__":
-    asyncio.run(prh_dash_ingest())
+    prh_dash_ingest()
