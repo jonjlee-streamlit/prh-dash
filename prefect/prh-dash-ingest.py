@@ -31,7 +31,7 @@ TMP_OUTPUT_DB = "db.sqlite3"
 
 
 def get_flow_name():
-    base_name = "datamart-finance-dash"
+    base_name = "prw-datamart-finance-dash"
     env_prefix = f"{PRW_ENV}." if PRW_ENV != "prod" else ""
     return f"{env_prefix}{base_name}"
 
