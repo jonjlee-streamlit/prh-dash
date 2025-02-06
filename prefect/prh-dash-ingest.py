@@ -1,10 +1,12 @@
 import os
+import asyncio
 from datetime import datetime
 from dotenv import load_dotenv
 from prefect import flow, task
 from prefect_shell import ShellOperation
 from prefect_aws import AwsCredentials, S3Bucket
 from prefect.blocks.system import Secret
+
 
 # Load env vars from a .env file
 # load_dotenv() does NOT overwrite existing env vars that are set before running this script.
@@ -37,13 +39,13 @@ def get_flow_name():
 
 
 @flow(retries=0, retry_delay_seconds=300, name=get_flow_name())
-def prh_dash_ingest():
+async def prh_dash_ingest():
     # Set working dir to project root
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     print("Running from:", os.getcwd())
 
-    data_key = Secret.load("prh-dash-data-key").get()
-    aws_creds = AwsCredentials.load("cloudflare-r2-dataset")
+    data_key = (await Secret.load("prh-dash-data-key")).get()
+    aws_creds = await AwsCredentials.load("cloudflare-r2-dataset")
 
     with ShellOperation(
         commands=[
@@ -54,8 +56,8 @@ def prh_dash_ingest():
         env={"PIPENV_CUSTOM_VENV_NAME": PRH_DASH_VENV_NAME},
         stream_output=True,
     ) as op:
-        proc = op.trigger()
-        proc.wait_for_completion()
+        proc = await op.trigger()
+        await proc.wait_for_completion()
         if proc.return_code != 0:
             raise Exception(f"Failed, exit code {proc.return_code}")
 
@@ -63,11 +65,11 @@ def prh_dash_ingest():
     s3_bucket = S3Bucket(
         bucket_name=PRH_DASH_CLOUDFLARE_R2_BUCKET, credentials=aws_creds
     )
-    out = s3_bucket.upload_from_path(
+    out = await s3_bucket.aupload_from_path(
         PRH_DASH_ENCRYPTED_DB_FILE, PRH_DASH_ENCRYPTED_DB_FILE
     )
     print("Uploaded to S3:", out)
 
 
 if __name__ == "__main__":
-    prh_dash_ingest()
+    asyncio.run(prh_dash_ingest())
