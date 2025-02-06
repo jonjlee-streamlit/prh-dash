@@ -47,7 +47,7 @@ async def prh_dash_ingest():
     data_key = (await Secret.load("prh-dash-data-key")).get()
     aws_creds = await AwsCredentials.load("cloudflare-r2-dataset")
 
-    with ShellOperation(
+    async with ShellOperation(
         commands=[
             "pipenv install",
             f'pipenv run python ingest.py "{PRH_DASH_SOURCE_DIR}" -o {TMP_OUTPUT_DB}',
