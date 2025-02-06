@@ -1,0 +1,14 @@
+# This Pipfile is only for running ingest scripts in prefect/ locally.
+# In production, the ingest script will be loaded as a module by the prh-warehouse project
+# and executed with a direct function call.
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[requires]
+python_version = "3"
+
+[packages]
+python-dotenv = "*"
+prefect = {extras = ["aws", "shell"], version = "*"}
