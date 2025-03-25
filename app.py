@@ -1,5 +1,11 @@
 import streamlit as st
+import time
 from src import auth, route, source_data, dept, update
+
+
+def redirect():
+    """Redirect to the main dashboard"""
+    st.markdown("Dashboard has moved to https://data.prh.app/finance")
 
 
 def run():
@@ -81,4 +87,5 @@ def show_index():
 st.set_page_config(
     page_title="PRH Dashboard", layout="wide", initial_sidebar_state="auto"
 )
-run()
+
+redirect()
